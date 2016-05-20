@@ -1,0 +1,4 @@
+.make-cache
+out/*.exe
+out/*.dll
+out/*.netmodule
