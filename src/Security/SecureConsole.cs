@@ -1,14 +1,11 @@
-using Hark.HarkPackageManager;
-
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
-using System.Numerics;
 using System.Security;
 using System.Linq;
 using System.IO;
 using System;
 
-namespace Hark.HarkPackageManager.Library
+namespace HarkLib.Security
 {
     public static class SecureConsole
     {

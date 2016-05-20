@@ -47,6 +47,7 @@ module Settings =
         let Wrapper = CsSettings "Wrapper" // Produce the final .dll
         let LibraryCore = CsSettings "LibraryCore"
         let UnitTesting = CsSettings "UnitTesting"
+        let Security = CsSettings "Security"
     
     module Fs =
         let Parsers = FsSettings "Parsers"
@@ -112,7 +113,7 @@ module Runtime =
                 
             prepareDirectory settings
             
-            (mkQuery "/out:{DEST} /target:{TARGET} {FILES} {MODULES} {DOC} /nologo {REFERENCES}"
+            (mkQuery "/out:{DEST} /nowarn:3013 /target:{TARGET} {FILES} {MODULES} {DOC} /nologo {REFERENCES}"
             <| Path.Combine(settings.destinationPath, settings.outputName)
             <| settings.target
             <| files
@@ -172,7 +173,8 @@ let (~%) x = x :> Settings.GSettings
 [
     % Settings.Cs.LibraryCore
     % Settings.Fs.Parsers
-    % Settings.Cs.Wrapper
+    % Settings.Cs.Security
+    % Settings.Cs.Wrapper // Wrapper
     % Settings.Cs.UnitTesting
 ] |> Seq.iter Runtime.run
 
