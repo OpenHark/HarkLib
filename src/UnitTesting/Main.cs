@@ -1,9 +1,9 @@
 using System.Text.RegularExpressions;
-using System.Diagnostics;
 using System.Reflection;
 using System.Linq;
-using System.Net;
 using System;
+
+using System.Web.UI;
 
 namespace UnitTesting
 {
@@ -11,12 +11,13 @@ namespace UnitTesting
     {
         public static void Main(string[] args)
         {
-            bool isVerbose = false;
-            string nameFilter = "Parsers\\.Html";
+            bool isVerbose = args.Length > 1 ? args[1].Trim() == "-v" : false;
+            string nameFilter = args.Length > 0 ? args[0].Trim() : null;
             
             Console.WriteLine(" ::: Unit testing begins.");
             
-            Regex rNameFilter = nameFilter == null ? new Regex("") : new Regex("^" + nameFilter);
+            Regex rNameFilter = String.IsNullOrEmpty(nameFilter) ?
+                new Regex("") : new Regex("^" + nameFilter);
             
             var tests = Assembly
                 .GetExecutingAssembly()

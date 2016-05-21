@@ -40,6 +40,9 @@ module public HTML =
         class
             member this.Value = value
             
+            member this.ToString(sb : StringBuilder) =
+                sb.Append("<!--").Append(value).Append("-->") |> ignore
+                
             override this.ToString() = "<!--" + value + "-->"
         end
         
@@ -63,6 +66,9 @@ module public HTML =
             /// </summary>
             abstract Elements : Element seq
             
+            /// <summary>
+            /// Write the string form of this element in a StringBuilder.
+            /// </summary>
             abstract ToString : StringBuilder -> unit
             
             override this.ToString() =
@@ -112,6 +118,7 @@ module public HTML =
             /// Tag name
             /// </summary>
             member this.Name = name
+            
             /// <summary>
             /// Tag attributes
             /// </summary>
@@ -124,7 +131,7 @@ module public HTML =
                     match x with
                     | :? string as s -> sb.Append(s) |> ignore
                     | :? IElement as e -> e.ToString(sb)
-                    | :? Comment as c -> sb.Append(c.ToString()) |> ignore
+                    | :? Comment as c -> c.ToString(sb)
                     | _ as x -> sb.Append(x.ToString()) |> ignore
                 
                 let at =
@@ -144,8 +151,7 @@ module public HTML =
                     )
                     |> Seq.fold (fun a b -> a + " " + b) ""
                     
-                sb
-                    .Append('<')
+                sb.Append('<')
                     .Append(name)
                     .Append(at)
                     .Append('>') |> ignore
@@ -153,14 +159,16 @@ module public HTML =
                 this.Children
                 |> Seq.iter matcher
                 
-                sb
-                    .Append("</")
+                sb.Append("</")
                     .Append(name)
                     .Append('>') |> ignore
             
                 
         end
         
+    /// <summary>
+    /// HTML document representing the whole page.
+    /// </summary>
     and Document() =
         class
             inherit IElement()
@@ -179,7 +187,7 @@ module public HTML =
                     match x with
                     | :? string as s -> sb.Append(s) |> ignore
                     | :? IElement as e -> e.ToString(sb)
-                    | :? Comment as c -> sb.Append(c.ToString()) |> ignore
+                    | :? Comment as c -> c.ToString(sb)
                     | _ as x -> sb.Append(x.ToString()) |> ignore
                 
                 this.Children
