@@ -1,7 +1,8 @@
+using System.Text.RegularExpressions;
 using System.Diagnostics;
+using System.Reflection;
 using System.Linq;
 using System.Net;
-using System.Reflection;
 using System;
 
 namespace UnitTesting
@@ -11,15 +12,19 @@ namespace UnitTesting
         public static void Main(string[] args)
         {
             bool isVerbose = false;
+            string nameFilter = "Parsers\\.Html";
             
             Console.WriteLine(" ::: Unit testing begins.");
+            
+            Regex rNameFilter = nameFilter == null ? new Regex("") : new Regex("^" + nameFilter);
             
             var tests = Assembly
                 .GetExecutingAssembly()
                 .GetTypes()
                 .Where(a => a.GetConstructor(Type.EmptyTypes) != null)
                 .Select(Activator.CreateInstance)
-                .OfType<ITest>();
+                .OfType<ITest>()
+                .Where(t => rNameFilter.IsMatch(t.Name));
             
             foreach(ITest test in tests)
             {
