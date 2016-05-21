@@ -44,20 +44,25 @@ namespace System.IO
         
         public static byte[] ReadUntilTimeout(this Stream stream, int timeout = -1, bool firstByteBlocking = false)
         {
-            if(timeout > -1)
-                stream.ReadTimeout = timeout;
-            
             using(MemoryStream ms = new MemoryStream())
             {
                 if(firstByteBlocking)
+                {
+                    stream.ReadTimeout = 0;
                     ms.WriteByte((byte)stream.ReadByte());
+                }
+                
+                if(timeout > -1)
+                    stream.ReadTimeout = timeout;
                 
                 try
                 {
                     stream.CopyTo(ms);
                 }
                 catch
-                { }
+                {
+                    throw;
+                }
                 
                 return ms.ToArray();
             }
