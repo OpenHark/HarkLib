@@ -42,13 +42,16 @@ namespace System.IO
             return sb.ToString();
         }
         
-        public static byte[] ReadUntilTimeout(this Stream stream, int timeout = -1)
+        public static byte[] ReadUntilTimeout(this Stream stream, int timeout = -1, bool firstByteBlocking = false)
         {
             if(timeout > -1)
                 stream.ReadTimeout = timeout;
             
             using(MemoryStream ms = new MemoryStream())
             {
+                if(firstByteBlocking)
+                    ms.WriteByte((byte)stream.ReadByte());
+                
                 try
                 {
                     stream.CopyTo(ms);

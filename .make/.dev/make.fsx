@@ -44,7 +44,6 @@ module Settings =
         member this.entryPointFileName = + "EntryPointFileName"
     
     module Cs =
-        let Wrapper = CsSettings "Wrapper" // Produce the final .dll
         let LibraryCore = CsSettings "LibraryCore"
         let UnitTesting = CsSettings "UnitTesting"
         let Security = CsSettings "Security"
@@ -174,7 +173,6 @@ let (~%) x = x :> Settings.GSettings
     % Settings.Cs.LibraryCore
     % Settings.Fs.Parsers
     % Settings.Cs.Security
-    % Settings.Cs.Wrapper // Wrapper
     % Settings.Cs.UnitTesting
 ] |> Seq.iter Runtime.run
 
