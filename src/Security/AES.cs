@@ -7,7 +7,7 @@ namespace HarkLib.Security
 {
     public static class AES
     {
-        public static byte[] Encrypt(byte[] data, byte[] key, byte[] iv)
+        public static CryptoStream GetEncrypter(byte[] key, byte[] iv, Stream destinationStream)
         {
             using(Aes aes = Aes.Create())
             {
@@ -16,19 +16,11 @@ namespace HarkLib.Security
 
                 ICryptoTransform encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
 
-                using(MemoryStream ms = new MemoryStream())
-                {
-                    using(CryptoStream cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write))
-                    {
-                        cs.Write(data);
-                        cs.Flush();
-                    }
-                    return ms.ToArray();
-                }
+                return new CryptoStream(destinationStream, encryptor, CryptoStreamMode.Write);
             }
         }
         
-        public static byte[] Decrypt(byte[] data, byte[] key, byte[] iv)
+        public static CryptoStream GetDecrypter(byte[] key, byte[] iv, Stream sourceStream)
         {
             using(Aes aes = Aes.Create())
             {
@@ -37,14 +29,32 @@ namespace HarkLib.Security
 
                 ICryptoTransform decryptor = aes.CreateDecryptor(key, iv);
 
-                using(MemoryStream r = new MemoryStream())
-                using(MemoryStream ms = new MemoryStream(data))
-                using(CryptoStream cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read))
+                return new CryptoStream(sourceStream, decryptor, CryptoStreamMode.Read);
+            }
+        }
+        
+        public static byte[] Encrypt(byte[] data, byte[] key, byte[] iv)
+        {
+            using(MemoryStream ms = new MemoryStream())
+            {
+                using(Stream cs = GetEncrypter(key, iv, ms))
                 {
-                    cs.CopyTo(r);
-                    
-                    return r.ToArray();
+                    cs.Write(data);
+                    cs.Flush();
                 }
+                return ms.ToArray();
+            }
+        }
+        
+        public static byte[] Decrypt(byte[] data, byte[] key, byte[] iv)
+        {
+            using(MemoryStream r = new MemoryStream())
+            using(MemoryStream ms = new MemoryStream(data))
+            using(CryptoStream cs = GetDecrypter(key, iv, ms))
+            {
+                cs.CopyTo(r);
+                
+                return r.ToArray();
             }
         }
     }
