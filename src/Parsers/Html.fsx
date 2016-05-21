@@ -4,8 +4,14 @@ namespace HarkLib.Parsers
 
 open System.Text.RegularExpressions
 open System.Collections.Generic
+open System.Diagnostics
+open System.Text
 open System
 
+/// <summary>
+/// Provides a parser for HTML which doesn't throw exception and auto correct
+/// the document.
+/// </summary>
 module public HTML =
     type internal StackValues =
     | TagOpen of string
@@ -27,6 +33,9 @@ module public HTML =
     | Text(value) -> "Text(" + value + ")"
     | Comment(value) -> "Comment(" + value + ")"
     
+    /// <summary>
+    /// HTML comment.
+    /// </summary>
     type Comment(value : string) =
         class
             member this.Value = value
@@ -49,7 +58,17 @@ module public HTML =
                     | _ -> ()
             }
             
+            /// <summary>
+            /// Provides the flat enumerator of all child elements.
+            /// </summary>
             abstract Elements : Element seq
+            
+            abstract ToString : StringBuilder -> unit
+            
+            override this.ToString() =
+                let sb = new StringBuilder()
+                this.ToString(sb)
+                sb.ToString()
             
             member this.ElementsByTagName(tagName : string) = seq {
                 let name = tagName.Trim().ToLower()
@@ -71,6 +90,10 @@ module public HTML =
             }
         end
     
+    /// <summary>
+    /// HTML element representing a tag with its name,
+    /// its attributes and its children.
+    /// </summary>
     and Element(name : string) =
         class
             inherit IElement()
@@ -85,12 +108,25 @@ module public HTML =
                     | _ -> ()
             }
             
+            /// <summary>
+            /// Tag name
+            /// </summary>
             member this.Name = name
+            /// <summary>
+            /// Tag attributes
+            /// </summary>
             member this.Attributes = attributes
             
             override this.Elements = getElements this
             
-            override this.ToString() =
+            override this.ToString(sb) =
+                let matcher (x : Object) =
+                    match x with
+                    | :? string as s -> sb.Append(s) |> ignore
+                    | :? IElement as e -> e.ToString(sb)
+                    | :? Comment as c -> sb.Append(c.ToString()) |> ignore
+                    | _ as x -> sb.Append(x.ToString()) |> ignore
+                
                 let at =
                     attributes
                     |> Seq.map (fun e -> (e.Key, e.Value))
@@ -107,11 +143,22 @@ module public HTML =
                                 a + "=\"" + b + "\""
                     )
                     |> Seq.fold (fun a b -> a + " " + b) ""
-                let ch =
-                    this.Children
-                    |> Seq.map (fun x -> x.ToString())
-                    |> Seq.fold (+) ""
-                "<" + name + at + ">" + ch + "</" + name + ">"
+                    
+                sb
+                    .Append('<')
+                    .Append(name)
+                    .Append(at)
+                    .Append('>') |> ignore
+                
+                this.Children
+                |> Seq.iter matcher
+                
+                sb
+                    .Append("</")
+                    .Append(name)
+                    .Append('>') |> ignore
+            
+                
         end
         
     and Document() =
@@ -127,210 +174,267 @@ module public HTML =
                     | _ -> ()
             }
             
-            override this.ToString() =
+            override this.ToString(sb) =
+                let matcher (x : Object) =
+                    match x with
+                    | :? string as s -> sb.Append(s) |> ignore
+                    | :? IElement as e -> e.ToString(sb)
+                    | :? Comment as c -> sb.Append(c.ToString()) |> ignore
+                    | _ as x -> sb.Append(x.ToString()) |> ignore
+                
                 this.Children
-                |> Seq.map (fun x -> x.ToString())
-                |> Seq.fold (+) ""
+                |> Seq.iter matcher
         end
     
-    type Fx =
-        static member unstack stack =
+    type private ParserState =
+    | EndParsing
+    | ParseContentUntil of char list * StringBuilder // name * content
+    | ToRoot
+    | ParseComment of ParserState * StringBuilder // fnReturn * value
+    | ParseAttributeValue of StringBuilder * char // value * w
+    | ParseAttributeValueStart2
+    | ParseAttributeValueStart
+    | ParseAttributeName of StringBuilder // name
+    | ParseAttributeStart
+    | ParseOpeningTagName of StringBuilder // name
+    | ParseClosingTagName of StringBuilder // name
+    | ParseRootText of StringBuilder // txt
+    | ParseRoot
+    
+    /// <summary>
+    /// Parse a document and correct it if needed.
+    /// </summary>
+    /// <param name="document">String document to parse.</param>
+    /// <returns>The parsed document.</returns>
+    let public Parse (document : string) =
+        let stack = ref []
+        
+        let rrAttName = new Regex("[a-zA-Z0-9\\-_!\\[\\]]")
+        let rexAttName char = rrAttName.IsMatch(string(char))
+        
+        let rrAttValue = new Regex("[a-zA-Z0-9\\-_]")
+        let rexAttValue char = rrAttValue.IsMatch(string(char))
+        
+        let rrContent = new Regex("[ >]")
+        let rexContent char = rrContent.IsMatch(string(char))
+        
+        let unstack stack =
             let h = List.head !stack
             stack := !stack |> List.tail
             h
-        static member enstack stack value = stack := !stack @ [value]
-        static member enstack2 stack value1 value2 = stack := !stack @ [value1 ; value2]
-        static member enstack3 stack value1 value2 value3 = stack := !stack @ [value1 ; value2 ; value3]
         
-        static member internal rex regex char = (new Regex(regex)).IsMatch(string(char))
-        
-        
-        static member internal parseContentUntil (name : string) (content : string) stack = function
-            | [] -> ()
-            | '<'::'/'::e ->
-                let rec isEndTag l r =
-                    match (l, r) with
-                    | ([], _)
-                    | (_, []) -> false
-                    | (x::[], x'::y::rn) when x = x' && Fx.rex "[ >]" y -> true
-                    | (x::ln, x'::rn) when x = x' -> isEndTag ln rn
-                    | _ -> false
-                if isEndTag (name.ToCharArray() |> Array.toList) e then
-                    Fx.enstack2 stack (Text content) (CloseTag name)
-                    let rec unt = function
-                    | [] -> ()
-                    | ' '::e
-                    | '>'::e -> Fx.parseRoot stack e
-                    | _::e -> unt e
-                    unt e
-                else
-                    Fx.parseContentUntil name (content + "</") stack e
-                    
-            | c::e ->
-                Fx.parseContentUntil name (content + (string c)) stack e
-        
-        static member internal toRoot tagName stack e =
-            match tagName with
-            | "script" -> Fx.parseContentUntil tagName "" stack e
-            | _ -> Fx.parseRoot stack e
-        
-        
-        static member internal parseComment fnReturn (value : string) stack = function
-            | [] -> ()
-            | '-'::'-'::'>'::e ->
-                Fx.enstack stack (StackValues.Comment value)
-                fnReturn stack e
-            | c::e ->
-                Fx.parseComment fnReturn (value + (string c)) stack e
+        let rec parseAll (tagName : string) stack data state =
+            let enstack stack value = stack := !stack @ [value]
+            let enstack2 stack value1 value2 = stack := !stack @ [value1 ; value2]
+            let enstack3 stack value1 value2 value3 = stack := !stack @ [value1 ; value2 ; value3]
             
-        static member internal parseAttributeValue (tagName : string) (value : string) (w : char) stack = function
-            | [] -> ()
-            | c::e when w <> char 0 && c = w ->
-                Fx.enstack stack (AttributeValue value)
-                Fx.parseAttributeStart tagName stack e
-            | ' '::e when w = char 0 ->
-                Fx.enstack stack (AttributeValue value)
-                Fx.parseAttributeStart tagName stack e
-            | '>'::e when w = char 0 ->
-                Fx.enstack2 stack (AttributeValue value) TagClose
-                Fx.toRoot tagName stack e
-            | '/'::'>'::e when w = char 0 ->
-                Fx.enstack3 stack (AttributeValue value) TagClose DirectTagClose
-                Fx.toRoot tagName stack e
-            | '\\'::c::e
-            | c::e ->
-                Fx.parseAttributeValue tagName (value + (string c)) w stack e
-        
-        static member internal parseAttributeValueStart2 (tagName : string) stack = function
-            | [] -> ()
-            | '<'::'!'::'-'::'-'::e ->
-                Fx.parseComment (Fx.parseAttributeValueStart2 tagName) "" stack e
-            | '>'::e ->
-                Fx.enstack stack TagClose
-                Fx.toRoot tagName stack e
-            | '/'::'>'::e ->
-                Fx.enstack2 stack TagClose DirectTagClose
-                Fx.toRoot tagName stack e
-            | c::e when Fx.rex "[a-zA-Z0-9\\-_]" c ->
-                Fx.parseAttributeValue tagName (string c) (char 0) stack e
-            | ('"' & c)::e
-            | ('\'' & c)::e ->
-                Fx.parseAttributeValue tagName "" c stack e
-            | _::e -> Fx.parseAttributeValueStart2 tagName stack e
-            
-        static member internal parseAttributeValueStart (tagName : string) stack = function
-            | [] -> ()
-            | '<'::'!'::'-'::'-'::e ->
-                Fx.parseComment (Fx.parseAttributeValueStart tagName) "" stack e
-            | '>'::e ->
-                Fx.enstack stack TagClose
-                Fx.toRoot tagName stack e
-            | '/'::'>'::e ->
-                Fx.enstack2 stack TagClose DirectTagClose
-                Fx.toRoot tagName stack e
-            | '='::e -> Fx.parseAttributeValueStart2 tagName stack e
-            | '\b'::e
-            | ' '::e -> Fx.parseAttributeValueStart tagName stack e
-            | c::e -> Fx.parseAttributeName tagName (string c) stack e
-        
-        static member internal parseAttributeName (tagName : string) (name : string) stack = function
-            | [] -> ()
-            | '<'::'!'::'-'::'-'::e ->
-                Fx.enstack stack (AttributeName name)
-                Fx.parseComment (Fx.parseAttributeValueStart tagName) "" stack e
-            | c::e when Fx.rex "[a-zA-Z0-9\\-_!\\[\\]]" c ->
-                Fx.parseAttributeName tagName (name + (string c)) stack e
-            | '>'::e ->
-                Fx.enstack2 stack (AttributeName name) TagClose
-                Fx.toRoot tagName stack e
-            | '/'::'>'::e ->
-                Fx.enstack3 stack (AttributeName name) TagClose DirectTagClose
-                Fx.toRoot tagName stack e
-            | '='::e ->
-                Fx.enstack stack (AttributeName name)
-                Fx.parseAttributeValueStart2 tagName stack e
-            | _::e ->
-                Fx.enstack stack (AttributeName name)
-                Fx.parseAttributeValueStart tagName stack e
-        
-        static member internal parseAttributeStart (tagName : string) stack = function
-            | [] -> ()
-            | '<'::'!'::'-'::'-'::e ->
-                Fx.parseComment (Fx.parseAttributeStart tagName) "" stack e
-            | ' '::e ->
-                Fx.parseAttributeStart tagName stack e
-            | '>'::e ->
-                Fx.enstack stack TagClose
-                Fx.toRoot tagName stack e
-            | '/'::'>'::e ->
-                Fx.enstack2 stack TagClose DirectTagClose
-                Fx.toRoot tagName stack e
-            | c::e ->
-                Fx.parseAttributeName tagName (string c) stack e
-        
-        static member internal parseOpeningTagName (name : string) stack = function
-            | [] -> ()
-            | '<'::'!'::'-'::'-'::e ->
-                Fx.enstack stack (TagOpen name)
-                Fx.parseComment (Fx.parseAttributeStart (name.Trim())) "" stack e
-            | ' '::e ->
-                Fx.enstack stack (TagOpen name)
-                Fx.parseAttributeStart (name.Trim()) stack e
-            | '>'::e ->
-                Fx.enstack2 stack (TagOpen name) TagClose
-                Fx.toRoot (name.Trim()) stack e
-            | '/'::'>'::e ->
-                Fx.enstack3 stack (TagOpen name) TagClose DirectTagClose
-                Fx.toRoot (name.Trim()) stack e
-            | c::e ->
-                Fx.parseOpeningTagName (name + (string c)) stack e
-        
-        static member internal parseClosingTagName (name : string) stack = function
-            | [] -> ()
-            | '<'::'!'::'-'::'-'::e ->
-                Fx.parseComment (Fx.parseClosingTagName name) "" stack e
-            | '/'::'>'::e
-            | '>'::e ->
-                let fname = name.Trim()
-                if fname.Length <> 0 then
-                    Fx.enstack stack (CloseTag fname)
-                Fx.parseRoot stack e
-            | c::e ->
-                Fx.parseClosingTagName (name + (string c)) stack e
-        
-        static member internal parseRootText (txt : string) stack = function
-            | [] ->
-                if txt.Length <> 0 then
-                    Fx.enstack stack (Text txt)
-            | '<'::'!'::'-'::'-'::e ->
-                Fx.enstack stack (Text txt)
-                Fx.parseComment (Fx.parseRootText "") "" stack e
-            | '<'::'/'::e ->
-                Fx.enstack stack (Text txt)
-                Fx.parseClosingTagName "" stack e
-            | '<'::e ->
-                Fx.enstack stack (Text txt)
-                Fx.parseOpeningTagName "" stack e
-            | c::e ->
-                Fx.parseRootText (txt + (string c)) stack e
+            let newTagName, newData, newState =
+                match state with
+                | ParseContentUntil(name, content) ->
+                    match data with
+                    | [] -> (null, [], EndParsing)
+                    | '<'::'/'::e ->
+                        let rec isEndTag l r =
+                            match (l, r) with
+                            | ([], _)
+                            | (_, []) -> false
+                            | (x::[], x'::y::rn) when x = x' && (y = ' ' || y = '>') -> true
+                            | (x::ln, x'::rn) when x = x' -> isEndTag ln rn
+                            | _ -> false
+                        if isEndTag name e then
+                            enstack2 stack (Text (content.ToString())) (CloseTag (new string (name |> List.toArray)))
+                            let rec unt = function
+                            | [] -> []
+                            | '>'::e -> e
+                            | _::e -> unt e
+                            (null, (unt e), ParseRoot)
+                        else
+                            (null, e, ParseContentUntil(name, content.Append("</")))
+                            
+                    | c::e ->
+                        (null, e, ParseContentUntil(name, content.Append(c)))
                 
-        static member internal parseRoot stack = function
-            | [] -> ()
-            | '<'::'!'::'-'::'-'::e ->
-                Fx.parseComment Fx.parseRoot "" stack e
-            | '<'::'/'::e ->
-                Fx.parseClosingTagName "" stack e
-            | '<'::e ->
-                Fx.parseOpeningTagName "" stack e
-            | c::e ->
-                Fx.parseRootText (string c) stack e
-    
-    let public Parse (value : string) =
-        let stack = ref []
+                | ToRoot ->
+                    match tagName with
+                    | "script" -> (tagName, data, ParseContentUntil(tagName.ToCharArray() |> Array.toList, new StringBuilder()))
+                    | _ -> (tagName, data, ParseRoot)
+                
+                
+                | ParseComment(fnReturn, value) ->
+                    match data with
+                    | [] -> (null, [], EndParsing)
+                    | '-'::'-'::'>'::e ->
+                        enstack stack (StackValues.Comment(value.ToString()))
+                        (null, e, fnReturn)
+                    | c::e ->
+                        (null, e, ParseComment(fnReturn, value.Append(c)))
+                    
+                | ParseAttributeValue(value, w) ->
+                    match data with
+                    | [] -> (null, [], EndParsing)
+                    | c::e when w <> char 0 && c = w ->
+                        enstack stack (AttributeValue (value.ToString()))
+                        (null, e, ParseAttributeStart)
+                    | ' '::e when w = char 0 ->
+                        enstack stack (AttributeValue (value.ToString()))
+                        (null, e, ParseAttributeStart)
+                    | '>'::e when w = char 0 ->
+                        enstack2 stack (AttributeValue (value.ToString())) TagClose
+                        (null, e, ToRoot)
+                    | '/'::'>'::e when w = char 0 ->
+                        enstack3 stack (AttributeValue (value.ToString())) TagClose DirectTagClose
+                        (null, e, ToRoot)
+                    | '\\'::c::e
+                    | c::e ->
+                        (null, e, ParseAttributeValue(value.Append(c), w))
+                
+                | ParseAttributeValueStart2 ->
+                    match data with
+                    | [] -> (null, [], EndParsing)
+                    | '<'::'!'::'-'::'-'::e ->
+                        (null, e, ParseComment(ParseAttributeValueStart2, new StringBuilder()))
+                    | '>'::e ->
+                        enstack stack TagClose
+                        (null, e, ToRoot)
+                    | '/'::'>'::e ->
+                        enstack2 stack TagClose DirectTagClose
+                        (null, e, ToRoot)
+                    | c::e when rexAttValue c ->
+                        (null, e, ParseAttributeValue(new StringBuilder(string c), char 0))
+                    | ('"' & c)::e
+                    | ('\'' & c)::e ->
+                        (null, e, ParseAttributeValue(new StringBuilder(), c))
+                    | _::e ->
+                        (null, e, ParseAttributeValueStart2)
+                    
+                | ParseAttributeValueStart ->
+                    match data with
+                    | [] -> (null, [], EndParsing)
+                    | '<'::'!'::'-'::'-'::e ->
+                        (null, e, ParseComment(ParseAttributeValueStart, new StringBuilder()))
+                    | '>'::e ->
+                        enstack stack TagClose
+                        (null, e, ToRoot)
+                    | '/'::'>'::e ->
+                        enstack2 stack TagClose DirectTagClose
+                        (null, e, ToRoot)
+                    | '='::e ->
+                        (null, e, ParseAttributeValueStart2)
+                    | '\b'::e
+                    | ' '::e ->
+                        (null, e, ParseAttributeValueStart)
+                    | c::e ->
+                        (null, e, ParseAttributeName(new StringBuilder(string c)))
+                
+                | ParseAttributeName(name) ->
+                    match data with
+                    | [] -> (null, [], EndParsing)
+                    | '<'::'!'::'-'::'-'::e ->
+                        enstack stack (AttributeName (name.ToString()))
+                        (null, e, ParseComment(ParseAttributeValueStart, new StringBuilder()))
+                    | c::e when rexAttName c ->
+                        (null, e, ParseAttributeName(name.Append(c)))
+                    | '>'::e ->
+                        enstack2 stack (AttributeName (name.ToString())) TagClose
+                        (null, e, ToRoot)
+                    | '/'::'>'::e ->
+                        enstack3 stack (AttributeName (name.ToString())) TagClose DirectTagClose
+                        (null, e, ToRoot)
+                    | '='::e ->
+                        enstack stack (AttributeName (name.ToString()))
+                        (null, e, ParseAttributeValueStart2)
+                    | _::e ->
+                        enstack stack (AttributeName (name.ToString()))
+                        (null, e, ParseAttributeValueStart)
+                
+                | ParseAttributeStart ->
+                    match data with
+                    | [] -> (null, [], EndParsing)
+                    | '<'::'!'::'-'::'-'::e ->
+                        (null, e, ParseComment(ParseAttributeStart, new StringBuilder()))
+                    | ' '::e ->
+                        (null, e, ParseAttributeStart)
+                    | '>'::e ->
+                        enstack stack TagClose
+                        (null, e, ToRoot)
+                    | '/'::'>'::e ->
+                        enstack2 stack TagClose DirectTagClose
+                        (null, e, ToRoot)
+                    | c::e ->
+                        (null, e, ParseAttributeName(new StringBuilder(string c)))
+                
+                | ParseOpeningTagName(name) ->
+                    match data with
+                    | [] -> (null, [], EndParsing)
+                    | '<'::'!'::'-'::'-'::e ->
+                        let tname = name.ToString().Trim()
+                        enstack stack (TagOpen tname)
+                        (tname, e, ParseComment(ParseAttributeStart, new StringBuilder()))
+                    | ' '::e ->
+                        let tname = name.ToString().Trim()
+                        enstack stack (TagOpen tname)
+                        (tname, e, ParseAttributeStart)
+                    | '>'::e ->
+                        let tname = name.ToString().Trim()
+                        enstack2 stack (TagOpen tname) TagClose
+                        (tname, e, ToRoot)
+                    | '/'::'>'::e ->
+                        let tname = name.ToString().Trim()
+                        enstack3 stack (TagOpen tname) TagClose DirectTagClose
+                        (tname, e, ToRoot)
+                    | c::e ->
+                        let tname = name.Append(c)
+                        (null, e, ParseOpeningTagName(tname))
+                
+                | ParseClosingTagName(name) ->
+                    match data with
+                    | [] -> (null, [], EndParsing)
+                    | '<'::'!'::'-'::'-'::e ->
+                        (null, e, ParseComment(ParseClosingTagName name, new StringBuilder()))
+                    | '/'::'>'::e
+                    | '>'::e ->
+                        let fname = name.ToString().Trim()
+                        if fname.Length <> 0 then
+                            enstack stack (CloseTag fname)
+                        ("", e, ParseRoot)
+                    | c::e ->
+                        (null, e, ParseClosingTagName(name.Append(c)))
+                
+                | ParseRootText(txt) ->
+                    match data with
+                    | [] ->
+                        if txt.Length <> 0 then
+                            enstack stack (Text (txt.ToString()))
+                        (null, [], EndParsing)
+                    | '<'::'!'::'-'::'-'::e ->
+                        enstack stack (Text (txt.ToString()))
+                        (null, e, ParseComment(ParseRootText (new StringBuilder()), (new StringBuilder())))
+                    | '<'::'/'::e ->
+                        enstack stack (Text (txt.ToString()))
+                        ("", e, ParseClosingTagName (new StringBuilder()))
+                    | '<'::e ->
+                        enstack stack (Text (txt.ToString()))
+                        ("", e, ParseOpeningTagName (new StringBuilder()))
+                    | c::e ->
+                        ("", e, ParseRootText (txt.Append(c)))
+                        
+                | _ ->
+                    match data with
+                    | [] -> (null, [], EndParsing)
+                    | '<'::'!'::'-'::'-'::e ->
+                        (null, e, ParseComment(ParseRoot, (new StringBuilder())))
+                    | '<'::'/'::e ->
+                        ("", e, ParseClosingTagName (new StringBuilder()))
+                    | '<'::e ->
+                        ("", e, ParseOpeningTagName (new StringBuilder()))
+                    | c::e ->
+                        ("", e, ParseRootText (new StringBuilder(string c)))
+                        
+            match newState with
+            | EndParsing -> ()
+            | _ -> parseAll (if newTagName = null then tagName else newTagName) stack newData newState
         
-        value.ToCharArray()
-        |> Array.toList
-        |> Fx.parseRoot stack
+        parseAll "" stack (document.ToCharArray() |> Array.toList) ParseRoot
         
         let enstack stack value = stack := [value] @ !stack
         let head objref = List.head !objref
@@ -384,7 +488,7 @@ module public HTML =
             if look !objStack then
                 let rec close objStack =
                     if isEmpty objStack |> not then
-                        if (Fx.unstack objStack :> Element).Name.Trim().ToLower() <> name then
+                        if (unstack objStack :> Element).Name.Trim().ToLower() <> name then
                             close objStack
                 close objStack
             else
@@ -392,7 +496,7 @@ module public HTML =
             toObject objStack doc e
             
         | DirectTagClose::e ->
-            Fx.unstack objStack |> ignore
+            unstack objStack |> ignore
             toObject objStack doc e
             
         | _::e ->

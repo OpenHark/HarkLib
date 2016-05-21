@@ -143,7 +143,7 @@ module Runtime =
         if filesToCompile |> Seq.exists Cache.needsUpdate then
             prepareDirectory settings
             
-            (mkQuery "--out:{DEST} --target:{TARGET} {FILES} {DOC} --nologo {REFERENCES}"
+            (mkQuery "--out:{DEST} --tailcalls+ --target:{TARGET} {FILES} {DOC} --nologo {REFERENCES}"
             <| Path.Combine(settings.destinationPath, settings.outputName)
             <| settings.target
             <| Path.Combine(settings.srcPath, settings.entryPointFileName)
