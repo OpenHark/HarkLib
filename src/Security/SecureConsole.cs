@@ -9,6 +9,12 @@ namespace HarkLib.Security
 {
     public static class SecureConsole
     {
+        /// <summary>
+        /// Read from the standard input a password and store it in a SecureString.
+        /// </summary>
+        /// <note>
+        /// Better use <b>ReadSecurePassword</b> instead.
+        /// </note>
         public static SecureString ReadPassword(char c = '*')
         {
             SecureString ss = new SecureString();
@@ -37,6 +43,18 @@ namespace HarkLib.Security
                         break;
                 }
             }
+        }
+        
+        /// <summary>
+        /// Read from the standard input a password and store it in a SecurePassword.
+        /// </summary>
+        public static SecurePassword ReadSecurePassword(char c = '*', int nbHashIterations = 500000)
+        {
+            return new SecurePassword(
+                password : ReadPassword(c),
+                nbHash : nbHashIterations,
+                autoClear : true
+            );
         }
     }
 }
