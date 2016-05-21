@@ -48,7 +48,7 @@ namespace System.IO
             {
                 if(firstByteBlocking)
                 {
-                    stream.ReadTimeout = 0;
+                    stream.ReadTimeout = System.Threading.Timeout.Infinite;
                     ms.WriteByte((byte)stream.ReadByte());
                 }
                 
