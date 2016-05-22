@@ -26,44 +26,14 @@ namespace Compiler
             }
         }
         
-        protected bool IsCommonTypeComplete
+        protected bool IsCommonTypeComplet
         {
             get
             {
-                return Get("Fs-CommonFolderType", "complete").ToLower() == "complete";
+                return Get("Fs-CommonFolderType", "complet").ToLower() == "complet";
             }
         }
         
-        /*
-        let FsRun (settings : Settings.FsSettings) =
-            let projName = "F# " + settings.name
-            let listFiles path = Utils.getAllFiles settings.srcPath "*.fsx"
-            let filesToCompile =
-                let common =
-                    if Settings.Fs.commonFolderIsComplet then
-                        listFiles Settings.Fs.commonFolder
-                    else
-                        Utils.getSurfaceFiles Settings.Fs.commonFolder "*.fsx"
-                listFiles settings.srcPath |> Seq.append common
-            if filesToCompile |> Seq.exists Cache.needsUpdate then
-                prepareDirectory settings
-                
-                (mkQuery "--out:{DEST} --tailcalls+ --target:{TARGET} {FILES} {DOC} --nologo {REFERENCES}"
-                <| Path.Combine(settings.destinationPath, settings.outputName)
-                <| settings.target
-                <| Path.Combine(settings.srcPath, settings.entryPointFileName)
-                <| doc "--doc:" settings.docFullPath
-                <| refs "--reference:" settings.references
-                <| "")
-                |> Compilation.run projName settings.compilerName
-                |> die
-                
-                encache filesToCompile
-                Path.Combine(settings.destinationPath, settings.outputName) |> enproduced
-                projName + " compiled." |> Console.WriteLine
-            else
-                "Nothing to recompile for " + projName + "." |> Console.WriteLine
-        */
         protected override void Compile()
         {
             IEnumerable<string> filesToCompile = SourcePath.Length > 0 ?
@@ -72,7 +42,7 @@ namespace Compiler
             if(CommonFolder.Length > 0)
             {
                 IEnumerable<string> common;
-                if(IsCommonTypeComplete)
+                if(IsCommonTypeComplet)
                     common = GetAllFiles(CommonFolder, "*.fsx");
                 else
                     common = GetSurfaceFiles(CommonFolder, "*.fsx");
