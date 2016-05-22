@@ -365,6 +365,9 @@ module public HTML =
                     | '>'::e ->
                         enstack stack TagClose
                         (null, e, ToRoot)
+                    | '<'::e ->
+                        enstack stack TagClose
+                        ("", e, ParseOpeningTagName (new StringBuilder()))
                     | '/'::'>'::e ->
                         enstack2 stack TagClose DirectTagClose
                         (null, e, ToRoot)
@@ -386,6 +389,10 @@ module public HTML =
                         let tname = name.ToString().Trim()
                         enstack2 stack (TagOpen tname) TagClose
                         (tname, e, ToRoot)
+                    | '<'::e ->
+                        let tname = name.ToString().Trim()
+                        enstack2 stack (TagOpen tname) TagClose
+                        ("", e, ParseOpeningTagName (new StringBuilder()))
                     | '/'::'>'::e ->
                         let tname = name.ToString().Trim()
                         enstack3 stack (TagOpen tname) TagClose DirectTagClose

@@ -19,8 +19,8 @@ namespace UnitTesting.Parsers
         {
             WebClient client = new WebClient();
             client.Headers.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2716.0 Safari/537.36 OPR/39.0.2234.0 (Edition developer)");
-            string pageContent = client.DownloadString("https://www.google.fr/?gfe_rd=cr&ei=8F4_V5yPGK-s8weUw7-4Cw#q=Chocolate");
-            //string pageContent = "<a html toto = \"12\" ><b><c id=\"answer-4606502\"></c></br></b></a>";
+            string pageContent = client.DownloadString("http://www.openbsd.org/");
+            //string pageContent = "<a><b><c <def></def></b></a>";
             
             HarkLib.Parsers.HTML.Document doc = null;
             
@@ -40,20 +40,19 @@ namespace UnitTesting.Parsers
                 doc = HarkLib.Parsers.HTML.Parse(pageContent);
             
             if(doc
-                .ElementsByTagName("div")
-                .Where(e => e.Attributes.ContainsKey("id"))
-                .Count() != 42)
+                .ElementsByTagName("a")
+                .Where(e => e.Attributes.ContainsKey("href"))
+                .Count() != 40)
                 return false;
             
             if(doc
-                .ElementsByAttribute("id", "main")
+                .ElementsByAttribute("rowspan", "2")
                 .First()
-                .Attributes["class"].Trim().ToLower() != "content")
+                .Attributes["bgcolor"].Trim().ToLower() != "#007b9c")
                 return false;
             
-            if(doc.ElementsByTagName("script")
-                .Select(e => " :: " + e.ToString())
-                .Count() != 13)
+            if(doc.ElementsByTagName("td")
+                .Count() != 5)
                 return false;
             
             return true;

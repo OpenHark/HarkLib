@@ -79,6 +79,54 @@ namespace System.IO
                 
             return data.ToArray();
         }
+        public static byte[] ReadUntil(this Stream stream, byte[] limitValues, bool included = false)
+        {
+            if(limitValues.Length == 0)
+                throw new ArgumentNullException("limitValues");
+            
+            List<byte> data = new List<byte>();
+            
+            while(true)
+            {
+                int value = stream.ReadByte();
+                
+                if(value == -1)
+                    break;
+                
+                if(value == limitValues[limitValues.Length - 1] && data.Count >= limitValues.Length - 1)
+                {
+                    bool isFound = true;
+                    
+                    for(int i = 0; i < limitValues.Length - 1; ++i)
+                        if(data[data.Count - limitValues.Length + i + 1] != limitValues[i])
+                        {
+                            isFound = false;
+                            break;
+                        }
+                    
+                    if(isFound)
+                    {
+                        if(!included)
+                            data.RemoveRange(data.Count - limitValues.Length + 1, limitValues.Length - 1);
+                        else
+                            data.Add((byte)value);
+                        break;
+                    }
+                }
+                
+                data.Add((byte)value);
+            }
+            
+            return data.ToArray();
+        }
+        public static string ReadUntil(this Stream stream, string limitValue, bool included = false)
+        {
+            return stream.ReadUntil(limitValue.GetBytes(), included).GetString();
+        }
+        public static string ReadUntil(this Stream stream, char limitValue, bool included = false)
+        {
+            return stream.ReadUntil(new byte[] { (byte)limitValue }, included).GetString();
+        }
         
         public static void Write(this Stream stream, byte[] data)
         {
