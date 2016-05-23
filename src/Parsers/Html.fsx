@@ -218,13 +218,13 @@ module public HTML =
         let stack = ref []
         
         let rrAttName = new Regex("[a-zA-Z0-9\\-_!\\[\\]]")
-        let rexAttName char = rrAttName.IsMatch(string(char))
+        let rexAttName char = rrAttName.IsMatch(string char)
         
         let rrAttValue = new Regex("[a-zA-Z0-9\\-_]")
-        let rexAttValue char = rrAttValue.IsMatch(string(char))
+        let rexAttValue char = rrAttValue.IsMatch(string char)
         
-        let rrContent = new Regex("[ >]")
-        let rexContent char = rrContent.IsMatch(string(char))
+        let rrSpace = new Regex("[ \b\r\n]")
+        let rexSpace char = rrSpace.IsMatch(string char)
         
         let unstack stack =
             let h = List.head !stack
@@ -246,7 +246,7 @@ module public HTML =
                             match (l, r) with
                             | ([], _)
                             | (_, []) -> false
-                            | (x::[], x'::y::rn) when x = x' && (y = ' ' || y = '>') -> true
+                            | (x::[], x'::y::rn) when x = x' && (rexSpace y || y = '>') -> true
                             | (x::ln, x'::rn) when x = x' -> isEndTag ln rn
                             | _ -> false
                         if isEndTag name e then
@@ -283,7 +283,7 @@ module public HTML =
                     | c::e when w <> char 0 && c = w ->
                         enstack stack (AttributeValue (value.ToString()))
                         (null, e, ParseAttributeStart)
-                    | ' '::e when w = char 0 ->
+                    | x::e when w = char 0 && rexSpace x ->
                         enstack stack (AttributeValue (value.ToString()))
                         (null, e, ParseAttributeStart)
                     | '>'::e when w = char 0 ->
@@ -360,7 +360,7 @@ module public HTML =
                     | [] -> (null, [], EndParsing)
                     | '<'::'!'::'-'::'-'::e ->
                         (null, e, ParseComment(ParseAttributeStart, new StringBuilder()))
-                    | ' '::e ->
+                    | x::e when rexSpace x ->
                         (null, e, ParseAttributeStart)
                     | '>'::e ->
                         enstack stack TagClose
@@ -381,7 +381,7 @@ module public HTML =
                         let tname = name.ToString().Trim()
                         enstack stack (TagOpen tname)
                         (tname, e, ParseComment(ParseAttributeStart, new StringBuilder()))
-                    | ' '::e ->
+                    | x::e when rexSpace x ->
                         let tname = name.ToString().Trim()
                         enstack stack (TagOpen tname)
                         (tname, e, ParseAttributeStart)

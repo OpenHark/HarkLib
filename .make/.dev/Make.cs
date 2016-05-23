@@ -14,6 +14,7 @@ namespace Compiler
             {
                 new CompilationCs(settings, "LibraryCore"),
                 new CompilationFs(settings, "Parsers"),
+                new CompilationCs(settings, "Parsers-Generic"),
                 new CompilationCs(settings, "Security"),
                 new CompilationCs(settings, "UnitTesting")
                 
