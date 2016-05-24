@@ -20,7 +20,7 @@ namespace UnitTesting.Parsers
         
         public override bool Execute()
         {
-            return FunctionalTest() && ParsedTest();
+            return FunctionalTest() && ParsedTest() && DeepParsedTest();
         }
         
         public bool FunctionalTest()
@@ -107,16 +107,58 @@ namespace UnitTesting.Parsers
             return true;
         }
         
+        protected bool DeepParsedTest()
+        {
+            ParserResult root = ByteSequencer.Parse(
+                "[version: ][i/code: ][message:\r\n][<headers:\r\n\r\n>][name::][<values:$>][|vname|:=][|vvalue|:;|$][</>][</>][$s/body$]",
+                "HTTP/1.1 404 Not found\r\nCookie: theme=light1; theme=light2; sessionToken=abc123\r\n\r\n\r\nHello! This is the body!".GetBytes()
+            ).Close();
+            
+            if(IsVerbose)
+            {
+                string key = "headers.<$name=Cookie$>.values.<$vname=theme$>.vvalue";
+                Console.WriteLine(" :!*********************: " + key);
+                foreach(var e in root.GetAll<string>(key))
+                    Console.WriteLine(" :!: " + e);
+                Console.WriteLine(" :!*********************: ");
+                
+                key = "headers.<$name=Cookie$>.values.<vname=theme>.vvalue";
+                Console.WriteLine(" :!*********************: " + key);
+                foreach(var e in root.GetAll<string>(key))
+                    Console.WriteLine(" :!: " + e);
+                Console.WriteLine(" :!*********************: ");
+                
+                key = "headers.<name=Cookie>.values.<vname=theme>.vvalue";
+                Console.WriteLine(" :!*********************: " + key);
+                foreach(var e in root.GetAll<string>(key))
+                    Console.WriteLine(" :!: " + e);
+                Console.WriteLine(" :!*********************: ");
+                
+                key = "headers.<name=Cookie>.values.<*>.vvalue";
+                Console.WriteLine(" :!*********************: " + key);
+                foreach(var e in root.GetAll<string>(key))
+                    Console.WriteLine(" :!: " + e);
+                Console.WriteLine(" :!*********************: ");
+            }
+            
+            return true;
+        }
+        
         protected bool ParsedTest()
         {
             ParserResult root = ByteSequencer.Parse(
-                "[version: ][i/code: ][message:\r\n][<headers:\r\n\r\n>][name::][|value|:\r\n|$][</>][$s/body$]",
-                "HTTP/1.1 404 Not found\r\nHeader1: data1\r\nCookie: theme=light; sessionToken=abc123\r\nHeader2: data2\r\nHeader3: data3\r\nHeader4: data4\r\n\r\nHello! This is the body!".GetBytes()
+                "[version: ][i/code: ][message:\r\n][<headers:\r\n\r\n>][name::][|value|:\r\n|$][</>][$|body|$]",
+                "HTTP/1.1 404 Not found\r\nHeader1: data1\r\nCookie: theme=light; sessionToken=abc123\r\nHeaderMultiple: x 1\r\nHeaderMultiple: x 2\r\nHeaderMultiple: x 3\r\nHeader2: data2\r\nHeader3: data3\r\nHeader4: data4\r\n\r\n      Hello! This is the body!".GetBytes()
             ).Close();
-			
+            
             if(IsVerbose)
             {
                 Console.WriteLine(":: ParsedTest");
+            
+                Console.WriteLine(" :!*********************: headers.<$name=HeaderMultiple$>.value");
+                foreach(var e in root.GetAll<string>("headers.<$name=HeaderMultiple$>.value"))
+                    Console.WriteLine(" :!: " + e);
+                Console.WriteLine(" :!*********************: ");
                 
                 Console.WriteLine("Version :");
                 Console.WriteLine(root["version"]);
@@ -157,24 +199,24 @@ namespace UnitTesting.Parsers
             if(!root["headers.<0>.value"].Equals("data1"))
                 return false;
                 
-            if(!root["headers.<2>.name"].Equals("Header2"))
+            if(!root["headers.<5>.name"].Equals("Header2"))
                 return false;
-            if(!root["headers.<2>.value"].Equals("data2"))
-                return false;
-                
-            if(!root["headers.<3>.name"].Equals("Header3"))
-                return false;
-            if(!root["headers.<3>.value"].Equals("data3"))
+            if(!root["headers.<5>.value"].Equals("data2"))
                 return false;
                 
-            if(!root["headers.<4>.name"].Equals("Header4"))
+            if(!root["headers.<6>.name"].Equals("Header3"))
                 return false;
-            if(!root["headers.<4>.value"].Equals("data4"))
+            if(!root["headers.<6>.value"].Equals("data3"))
+                return false;
+                
+            if(!root["headers.<7>.name"].Equals("Header4"))
+                return false;
+            if(!root["headers.<7>.value"].Equals("data4"))
                 return false;
                 
             if(!root["body"].Equals("Hello! This is the body!"))
                 return false;
-            
+                
             return true;
         }
     }

@@ -1,6 +1,9 @@
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Numerics;
 using System.Linq;
+using System.IO;
 using System;
 
 using HarkLib.Core;
@@ -69,11 +72,23 @@ namespace HarkLib.Parsers.Generic
                 case "i/":
                     return int.Parse(data.GetString());
                     
+                case "x/":
+                    return Int32.Parse(data.GetString(), System.Globalization.NumberStyles.HexNumber);
+                    
                 case "s/":
                     return data.GetString();
                     
                 case "b/":
                     return byte.Parse(data.GetString());
+                    
+                case "sm/":
+                    return new MemoryStream(data);
+                    
+                case "bi/":
+                    return new BigInteger(data);
+                    
+                case "xbi/":
+                    return BigInteger.Parse(data.GetString(), NumberStyles.AllowHexSpecifier);
                     
                 case "ba/":
                     return data;
@@ -92,11 +107,23 @@ namespace HarkLib.Parsers.Generic
                 case "i/":
                     return int.Parse(data);
                     
+                case "x/":
+                    return Int32.Parse(data, System.Globalization.NumberStyles.HexNumber);
+                    
                 case "s/":
                     return data;
                     
                 case "b/":
                     return byte.Parse(data);
+                    
+                case "sm/":
+                    return new MemoryStream(data.GetBytes());
+                    
+                case "bi/":
+                    return BigInteger.Parse(data);
+                    
+                case "xbi/":
+                    return BigInteger.Parse(data, NumberStyles.AllowHexSpecifier);
                     
                 case "ba/":
                     return data.GetBytes();
@@ -112,27 +139,37 @@ namespace HarkLib.Parsers.Generic
             if(value.Length == 0)
                 return this;
                 
-            if(Matches(value, "^\\[(?<type>((ba|[isb])/)?)(?<name>[a-zA-Z0-9_\\-]+):(?<delimiter>[^\\]]+)\\](?<_>.*)$", out m))
+            string type = "(?<type>((ba|sm|[isb])/)?)";
+            string name = "(?<name>[a-zA-Z0-9_\\-]*)";
+            string delim = "(?<delimiter>[^\\]]+)";
+            
+            if(Matches(value, "^\\[" + type + "" + name + ":" + delim + "\\](?<_>.*)$", out m))
                 return UntilAny(
                     m.Groups["name"].Value,
                     ParseDelimiter(m.Groups["delimiter"].Value),
                     converter : b => ParseType(m.Groups["type"].Value, b)
                 ).Eval(m.Groups["_"].Value);
                 
-            if(Matches(value, "^\\[(?<type>((ba|[isb])/)?)\\|(?<name>[a-zA-Z0-9_\\-]+)\\|:(?<delimiter>[^\\]]+)\\](?<_>.*)$", out m))
+            if(Matches(value, "^\\[" + type + "\\|" + name + "\\|:" + delim + "\\](?<_>.*)$", out m))
                 return UntilAny(
                     m.Groups["name"].Value,
                     ParseDelimiter(m.Groups["delimiter"].Value),
                     converter : b => ParseType(m.Groups["type"].Value, b.Trim())
                 ).Eval(m.Groups["_"].Value);
             
-            if(Matches(value, "^\\[\\$(?<type>((ba|[isb])/)?)(?<name>[a-zA-Z0-9_\\-]+)\\$\\](?<_>.*)$", out m))
+            if(Matches(value, "^\\[\\$" + type + "\\|" + name + "\\|\\$\\](?<_>.*)$", out m))
+                return ToEnd(
+                    m.Groups["name"].Value,
+                    converter : b => ParseType(m.Groups["type"].Value, b.GetString().Trim())
+                ).Eval(m.Groups["_"].Value);
+            
+            if(Matches(value, "^\\[\\$" + type + "" + name + "\\$\\](?<_>.*)$", out m))
                 return ToEnd(
                     m.Groups["name"].Value,
                     converter : b => ParseType(m.Groups["type"].Value, b)
                 ).Eval(m.Groups["_"].Value);
             
-            if(Matches(value, "^\\[\\<(?<name>[a-zA-Z0-9_\\-]+):(?<delimiter>[^\\]]+)\\>\\](?<in>.*)\\[\\</\\>\\](?<_>.*)$", out m))
+            if(Matches(value, "^\\[\\<" + name + ":" + delim + "\\>\\](?<in>.*)\\[\\</\\>\\](?<_>.*)$", out m))
                 return RepeatUntil(
                     m.Groups["name"].Value,
                     m.Groups["delimiter"].Value,
@@ -223,23 +260,19 @@ namespace HarkLib.Parsers.Generic
             return result;
         }
         
-        public ByteSequencer IfContains(byte delimiter)
+        public ByteSequencer ThrowIfEmpty()
         {
-            if(Array.IndexOf(data, delimiter, currentIndex) == -1)
-                NotFound("IfContains");
+            if(data.Length <= currentIndex)
+                NotFound("The sequence is empty.");
             
             return this;
         }
-        public ByteSequencer IfContains(byte[] delimiter)
+        public ByteSequencer ThrowIfNotEmpty()
         {
-            if(IndexOf(delimiter) == -1)
-                NotFound("IfContains");
+            if(data.Length > currentIndex)
+                NotFound("The sequence is empty.");
             
             return this;
-        }
-        public ByteSequencer IfContains(string delimiter)
-        {
-            return IfContains(delimiter.GetBytes());
         }
         
         public ByteSequencer Until(
@@ -369,7 +402,7 @@ namespace HarkLib.Parsers.Generic
                 throw new ValidatorException();
             
             current[name] = converter(slice);
-            currentIndex += slice.Length + (skipDelimiter ? delimiter.Length : 0);
+            currentIndex += slice.Length - (addDelimiter ? delimiter.Length : 0) + (skipDelimiter ? delimiter.Length : 0);
             
             CloseIfEnd();
             return this;
@@ -382,7 +415,13 @@ namespace HarkLib.Parsers.Generic
             Func<byte[], object> converter = null,
             Func<byte[], bool> validator = null)
         {
-            return Until(name, (byte)delimiter, skipDelimiter, addDelimiter, converter, validator);
+            return Until(
+                name,
+                (byte)delimiter,
+                skipDelimiter,
+                addDelimiter,
+                converter,
+                validator);
         }
         public ByteSequencer Until(
             string name,
@@ -452,13 +491,15 @@ namespace HarkLib.Parsers.Generic
         }
         public ByteSequencer RepeatUntil(string name, byte[] delimiter, Func<ByteSequencer, ByteSequencer> action, bool skipDelimiter = true, bool addDelimiter = false)
         {
+            ThrowIfClosed();
+            
             byte[] slice = Slice(delimiter, skipDelimiter, addDelimiter);
             if(slice == null)
             {
                 NotFound(name);
                 return this;
             }
-            currentIndex += slice.Length + (skipDelimiter ? delimiter.Length : 0);
+            currentIndex += slice.Length - (addDelimiter ? delimiter.Length : 0) + (skipDelimiter ? delimiter.Length : 0);
             
             ByteSequencer bs;
             List<Dictionary<string, object>> list = new List<Dictionary<string, object>>();
@@ -477,6 +518,7 @@ namespace HarkLib.Parsers.Generic
             
             current[name] = list;
             
+            CloseIfEnd();
             return this;
         }
         public ByteSequencer RepeatUntil(string name, char delimiter, Func<ByteSequencer, ByteSequencer> action, bool skipDelimiter = true, bool addDelimiter = false)
