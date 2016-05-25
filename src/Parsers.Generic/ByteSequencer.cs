@@ -43,6 +43,16 @@ namespace HarkLib.Parsers.Generic
         private readonly byte[] data;
         private int currentIndex;
         
+        public static implicit operator ParserResult(ByteSequencer bs)
+        {
+            return new ParserResult(bs.Document);
+        }
+        
+        public static ByteSequencer operator | (ByteSequencer bs, string eval)
+        {
+            return bs.Eval(eval);
+        }
+        
         public static ByteSequencer Parse(string parser, byte[] input)
         {
             return new ByteSequencer(input).Eval(parser);
@@ -60,7 +70,7 @@ namespace HarkLib.Parsers.Generic
         }
         protected string[] ParseDelimiter(string delimiter)
         {
-            return delimiter.Split('|');
+            return delimiter.Replace("\\!", "!").SplitNotEscaped('|').ToArray();
         }
         protected object ParseType(string type, byte[] data)
         {
@@ -132,30 +142,54 @@ namespace HarkLib.Parsers.Generic
                     throw new UnrecognizedTypeException("Can't understand the type \"" + type + "\"");
             }
         }
+        protected string[] SplitDelim(string delim)
+        {
+            string[] sd = delim.SplitNotEscaped('!', nbMax : 2).ToArray();
+            if(sd.Length == 1)
+                return new string[] { sd[0], "" };
+            return sd;
+        }
         public ByteSequencer Eval(string value)
         {
             Match m;
             
             if(value.Length == 0)
                 return this;
-                
+            
             string type = "(?<type>((ba|sm|[isb])/)?)";
             string name = "(?<name>[a-zA-Z0-9_\\-]*)";
             string delim = "(?<delimiter>[^\\]]+)";
             
+            if(Matches(value, "^(?<pre>[^\\]]+)\\[(?<_>.*)$", out m))
+            {
+                Console.WriteLine(m.Groups["_"].Value);
+                if(!Slice(currentIndex, currentIndex + m.Groups["pre"].Value.Length).GetString().StartsWith(m.Groups["pre"].Value))
+                    throw new NotFoundException(m.Groups["pre"].Value);
+                
+                return this.Eval("[" + m.Groups["_"].Value);
+            }
+            
             if(Matches(value, "^\\[" + type + "" + name + ":" + delim + "\\](?<_>.*)$", out m))
+            {
+                string[] delims = SplitDelim(m.Groups["delimiter"].Value);
                 return UntilAny(
                     m.Groups["name"].Value,
-                    ParseDelimiter(m.Groups["delimiter"].Value),
-                    converter : b => ParseType(m.Groups["type"].Value, b)
+                    ParseDelimiter(delims[0]),
+                    converter : b => ParseType(m.Groups["type"].Value, b),
+                    validator : s => delims[1].Length == 0 ? true : !s.Contains(delims[1])
                 ).Eval(m.Groups["_"].Value);
+            }
                 
             if(Matches(value, "^\\[" + type + "\\|" + name + "\\|:" + delim + "\\](?<_>.*)$", out m))
+            {
+                string[] delims = SplitDelim(m.Groups["delimiter"].Value);
                 return UntilAny(
                     m.Groups["name"].Value,
-                    ParseDelimiter(m.Groups["delimiter"].Value),
-                    converter : b => ParseType(m.Groups["type"].Value, b.Trim())
+                    ParseDelimiter(delims[0]),
+                    converter : b => ParseType(m.Groups["type"].Value, b.Trim()),
+                    validator : s => delims[1].Length == 0 ? true : !s.Contains(delims[1])
                 ).Eval(m.Groups["_"].Value);
+            }
             
             if(Matches(value, "^\\[\\$" + type + "\\|" + name + "\\|\\$\\](?<_>.*)$", out m))
                 return ToEnd(
@@ -168,7 +202,7 @@ namespace HarkLib.Parsers.Generic
                     m.Groups["name"].Value,
                     converter : b => ParseType(m.Groups["type"].Value, b)
                 ).Eval(m.Groups["_"].Value);
-            
+                
             if(Matches(value, "^\\[\\<" + name + ":" + delim + "\\>\\](?<in>.*)\\[\\</\\>\\](?<_>.*)$", out m))
                 return RepeatUntil(
                     m.Groups["name"].Value,
@@ -176,8 +210,25 @@ namespace HarkLib.Parsers.Generic
                     action : x => x.Eval(m.Groups["in"].Value)
                 ).Eval(m.Groups["_"].Value);
             
-            if(Matches(value, "^{(?<left>[^|]+)\\|(?<right>.+)}(?<_>.*)$", out m))
-                return Or(b => b.Eval(m.Groups["left"].Value), b => b.Eval(m.Groups["right"].Value)).Eval(m.Groups["_"].Value);
+            if(Matches(value, "^{(?<left>.+)\\|\\|(?<right>.+)}(?<_>.*)$", out m))
+            {
+                List<string> ors = new List<string>();
+                string lastLeft;
+                
+                do
+                {
+                    ors.Add(m.Groups["right"].Value);
+                    lastLeft = m.Groups["left"].Value;
+                    
+                } while(Matches(m.Groups["left"].Value, "^(?<left>.+)\\|\\|(?<right>.+)$", out m));
+                
+                ors.Add(lastLeft);
+                ors.Reverse();
+                
+                var arr = ors.Select(e => (Func<ByteSequencer, ByteSequencer>)(b => b.Eval(e))).ToArray();
+                
+                return Or(arr).Eval(m.Groups["_"].Value);
+            }
             
             throw new CommandNotRecognizedException("Can't parse \"" + value + "\"");
         }

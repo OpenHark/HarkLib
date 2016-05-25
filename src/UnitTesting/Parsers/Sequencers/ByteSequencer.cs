@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System;
-
+using System.Text.RegularExpressions;
 using HarkLib.Parsers.Generic;
 
 namespace UnitTesting.Parsers
@@ -20,10 +20,56 @@ namespace UnitTesting.Parsers
         
         public override bool Execute()
         {
-            return FunctionalTest() && ParsedTest() && DeepParsedTest();
+            return /*FunctionalTest() && ParsedTest() && DeepParsedTest() && */ Operators();
         }
         
-        public bool FunctionalTest()
+        protected bool Operators()
+        {
+            var bs = new ByteSequencer("HTTP/1.1 404 Not found\r\nSuperHeader::master value\r\nSuperHeader!master value\r\nSuperHeader:-:master value\r\nHeader1: data1\r\nCookie: theme=light; sessionToken=abc123\r\nHeaderMultiple: x 1\r\nHeaderMultiple: x 2\r\nHeaderMultiple: x 3\r\nHeader2: data2\r\nHeader3: data3\r\nHeader4: data4\r\n\r\n      Hello! This is the body!");
+            
+            ParserResult root = bs
+                | "HTTP/[version: ]"
+                | "[i/code: ]"
+                | "[message:\r\n]"
+                | "[<headers:\r\n\r\n>]{[name:::!\r\n][|value|:\r\n|$]||[name:\\!!\r\n][|value|:\r\n|$]||[name::!\r\n][|value|:\r\n|$]}[</>]"
+                | "[$s/body$]";
+            
+            if(IsVerbose)
+            {
+                Console.WriteLine(":: ParsedTest");
+            
+                Console.WriteLine(" :!*********************: headers.<$name=HeaderMultiple$>.value");
+                foreach(var e in root.GetAll<string>("headers.<$name=HeaderMultiple$>.value"))
+                    Console.WriteLine(" :!: " + e);
+                Console.WriteLine(" :!*********************: ");
+                
+                Console.WriteLine("Version :");
+                Console.WriteLine(root["version"]);
+                Console.WriteLine("Code :");
+                Console.WriteLine(root["code"]);
+                Console.WriteLine("Message :");
+                Console.WriteLine(root["message"]);
+                
+                Console.WriteLine("Headers :");
+                
+                Console.WriteLine("Cookies : " + root.GetString("headers.<|name=cookie|>.value") + "|");
+                
+                var cookies = ByteSequencer.Parse(
+                    "[<cookies:$>][|name|:=][value:;|$][</>]",
+                    root.GetString("headers.<|name=cookie|>.value")
+                ).Close();
+                
+                foreach(var e in cookies.GetList("cookies"))
+                    Console.WriteLine(e["name"] + " //=// " + e["value"]);
+                    
+                Console.WriteLine("Body :");
+                Console.WriteLine(root["body"]);
+            }
+            
+            return true;
+        }
+        
+        protected bool FunctionalTest()
         {
             ParserResult root = new ByteSequencer("HTTP/1.1 404 Not found\r\nHeader1: data1\r\nErrorHeader\r\nHeader2: data2\r\nHeader3: data3\r\nHeader4: data4\r\nErrorHeaderFinal\r\n\r\nHello! This is the body!")
                 .Until("version", " ")
@@ -111,7 +157,7 @@ namespace UnitTesting.Parsers
         {
             ParserResult root = ByteSequencer.Parse(
                 "[version: ][i/code: ][message:\r\n][<headers:\r\n\r\n>][name::][<values:$>][|vname|:=][|vvalue|:;|$][</>][</>][$s/body$]",
-                "HTTP/1.1 404 Not found\r\nCookie: theme=light1; theme=light2; sessionToken=abc123\r\n\r\n\r\nHello! This is the body!".GetBytes()
+                "HTTP/1.1 404 Not found\r\nCookie: theme=light1; theme=light2; sessionToken=abc123\r\n\r\n\r\nHello! This is the body!"
             ).Close();
             
             if(IsVerbose)

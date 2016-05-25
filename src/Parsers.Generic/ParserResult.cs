@@ -190,7 +190,6 @@ namespace HarkLib.Parsers.Generic
             
             Dictionary<string, List<T>> map = new Dictionary<string, List<T>>();
             
-            Console.WriteLine("xxxxxxxxxxxxx " + listPath + " " + (list == null));
             foreach(Dico e in list)
             {
                 map.Add(

@@ -6,6 +6,10 @@
 - [Project structure](#project-structure)
 - [Compilation](#compilation)
 - [Usages](#usages)
+  - [Delimiter Regular Expression (drex)](#usages-drex)
+    - [Parsing](#usages-drex-parsing)
+    - [Types](#usages-drex-types)
+    - [Results](#usages-drex-results)
 - [Tasks](#tasks)
 - [Future](#future)
 - [License](#license)
@@ -13,6 +17,11 @@
 ## <a name="introduction"></a>Introduction
 
 This is a set of .NET libraries for advanced use.
+
+### Disclaimer
+
+No contributor is responsible or liable for illegal use of
+this library.
 
 ## <a name="project-structure"></a>Project structure
 
@@ -78,7 +87,9 @@ names, etc...
 
 ## <a name="usages"></a>Usages
 
-### Parsing
+### <a name="usages-drex"></a>Delimiter Regular Expression (drex)
+
+#### <a name="usages-drex-parsing"></a>Parsing
 
 ```csharp
 using HarkLib.Parsers.Generic;
@@ -119,9 +130,12 @@ ParserResult root = new ByteSequencer("HTTP/1.1 404 Not found\r\nHeader1: data1\
 "[|value|:\r\n|$]" // Everything until '\r\n' or until the end of the sequence, then trimmed : called 'value'.
 "[$s/body$]" // Everything until the end of the sequence, casted into string : called 'body'.
 "[$|body|$]" // Everything until the end of the sequence, casted into string and trimmed : called 'body'.
+"{[version: ]||[message:\r\n]}" // version matching or message matching.
+"{[version: ]||[subversion:--]||[message:\r\n]}" // version matching or subversion matching or message matching.
+"[HeaderName:x!\r\n]" // HeaderName ends when a 'x' is found and must not contain '\r\n'.
 ```
 
-### Types
+#### <a name="usages-drex-types"></a>Types
 
 ```csharp
 "404" => "[code: ]" => "404"
@@ -135,7 +149,7 @@ ParserResult root = new ByteSequencer("HTTP/1.1 404 Not found\r\nHeader1: data1\
 "  404   " => "[$i/|body|$]" => 404
 ```
 
-| Symbol | Name | | Type | Operation |
+| Symbol | Name | Type | Operation |
 | --- | --- | --- | --- |
 | `i/` | Integer | int | Parse |
 | `b/` | Byte | byte | Parse |
@@ -146,7 +160,7 @@ ParserResult root = new ByteSequencer("HTTP/1.1 404 Not found\r\nHeader1: data1\
 | `sm/` | Stream | MemoryStream | Wrap or encode + wrap |
 | `xbi/` | Hexadecimal BigInteger | BigInteger | Parse |
 
-### Results
+#### <a name="usages-drex-results"></a>Results
 
 ```csharp
 string version = (string)root["version"];
@@ -176,14 +190,21 @@ List<string> allValues = root.GetAll<string>("headers.<*>.value");
 - Parsers
   - [ ] Add XML permissive parsing
 - Parsers.Generic
-  - [ ] ByteSequencer : Create a better result parsing for 'or' (`{...|...}`)
+  - [X] ByteSequencer : Create a better result parsing for 'or' (`{...|...}`)
+  - [X] ByteSequencer : Add exclude pattern
   - [ ] Clean the files
   - [ ] Test in real situations
 - Security
   - [ ] Add RSA
   - [ ] Add anti-forcing system (slow generation - fast use)
-
-## <a name="future"></a>Future
+- Web
+  - [ ] Add web client
+  - [ ] Add web server
+  - [ ] Add webdav server
+  - [ ] Add ghost mail system
+  - [ ] Add web directory browser
+  - [ ] Add light web server for software interface
+  - [ ] Add light webdav server for software interface
 
 ## <a name="license"></a>License
 
