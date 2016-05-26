@@ -133,6 +133,10 @@ ParserResult root = new ByteSequencer("HTTP/1.1 404 Not found\r\nHeader1: data1\
 "{[version: ]||[message:\r\n]}" // version matching or message matching.
 "{[version: ]||[subversion:--]||[message:\r\n]}" // version matching or subversion matching or message matching.
 "[HeaderName:x!\r\n]" // HeaderName ends when a 'x' is found and must not contain '\r\n'.
+"[Name]" // Add an empty entry called 'Name'.
+"[ba/Name]" // Add an empty byte array entry called 'Name'.
+"[Name=Content here]" // Add an entry called 'Name' with a value equals to 'Content here'.
+"[<Name>]" // Add an empty list entry called 'Name'.
 ```
 
 #### <a name="usages-drex-types"></a>Types
@@ -197,11 +201,11 @@ List<string> allValues = root.GetAll<string>("headers.<*>.value");
 - Security
   - [ ] Add RSA
   - [ ] Add anti-forcing system (slow generation - fast use)
-- Web
+- Net
   - [ ] Add web client
   - [ ] Add web server
   - [ ] Add webdav server
-  - [ ] Add ghost mail system
+  - [X] Add ghost mail system
   - [ ] Add web directory browser
   - [ ] Add light web server for software interface
   - [ ] Add light webdav server for software interface

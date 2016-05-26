@@ -1,9 +1,5 @@
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Net;
 using System;
-using System.Text.RegularExpressions;
+
 using HarkLib.Parsers.Generic;
 
 namespace UnitTesting.Parsers
@@ -20,7 +16,7 @@ namespace UnitTesting.Parsers
         
         public override bool Execute()
         {
-            return /*FunctionalTest() && ParsedTest() && DeepParsedTest() && */ Operators();
+            return /*FunctionalTest() && ParsedTest() && DeepParsedTest() &&*/ Operators();
         }
         
         protected bool Operators()
@@ -36,7 +32,7 @@ namespace UnitTesting.Parsers
             
             if(IsVerbose)
             {
-                Console.WriteLine(":: ParsedTest");
+                Console.WriteLine(":: Operators");
             
                 Console.WriteLine(" :!*********************: headers.<$name=HeaderMultiple$>.value");
                 foreach(var e in root.GetAll<string>("headers.<$name=HeaderMultiple$>.value"))
