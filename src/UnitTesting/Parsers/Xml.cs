@@ -5,13 +5,13 @@ using System;
 
 namespace UnitTesting.Parsers
 {
-    public class Html : ITest
+    public class Xml : ITest
     {
         public override string Name
         {
             get
             {
-                return "Parsers.Html.Parse";
+                return "Parsers.Xml.Parse";
             }
         }
         
@@ -19,8 +19,7 @@ namespace UnitTesting.Parsers
         {
             WebClient client = new WebClient();
             client.Headers.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2716.0 Safari/537.36 OPR/39.0.2234.0 (Edition developer)");
-            string pageContent = client.DownloadString("http://www.openbsd.org/");
-            //string pageContent = "<a><b><c <def></def></b></a>";
+            string pageContent = client.DownloadString("http://www.sitemaps.org/schemas/sitemap/0.9/siteindex.xsd");
             
             HarkLib.Parsers.Document doc = null;
             
@@ -31,28 +30,23 @@ namespace UnitTesting.Parsers
                 {
                     sw.Reset();
                     sw.Start();
-                    doc = HarkLib.Parsers.HTML.Parse(pageContent);
+                    doc = HarkLib.Parsers.XML.Parse(pageContent, null);
                     sw.Stop();
                     WriteLine(sw.Elapsed);
                 }
             }
             else
-                doc = HarkLib.Parsers.HTML.Parse(pageContent);
+                doc = HarkLib.Parsers.XML.Parse(pageContent, null);
             
-            if(doc
-                .ElementsByTagName("a")
-                .Where(e => e.Attributes.ContainsKey("href"))
-                .Count() != 40)
-                return false;
+            if(IsVerbose)
+            {
+                doc.ElementsByTagName("documentation")
+                    .ForEach(e => Console.WriteLine(" :: " + e));
+            }
+            Console.WriteLine("*********************");
+            doc.ElementsByTagName("?xml").First().Attributes.ForEach(s => Console.WriteLine(s));
             
-            if(doc
-                .ElementsByAttribute("rowspan", "2")
-                .First()
-                .Attributes["bgcolor"].Trim().ToLower() != "#007b9c")
-                return false;
-            
-            if(doc.ElementsByTagName("td")
-                .Count() != 5)
+            if(doc.ElementsByTagName("documentation").Count() != 5)
                 return false;
             
             return true;

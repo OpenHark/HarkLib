@@ -192,7 +192,7 @@ List<string> allValues = root.GetAll<string>("headers.<*>.value");
 ## <a name="tasks"></a>Tasks
 
 - Parsers
-  - [ ] Add XML permissive parsing
+  - [X] Add XML permissive parsing
 - Parsers.Generic
   - [X] ByteSequencer : Create a better result parsing for 'or' (`{...|...}`)
   - [X] ByteSequencer : Add exclude pattern

@@ -88,5 +88,20 @@ namespace System
             
             return strs;
         }
+        
+        public static string Substring(this string str, string start, string end)
+        {
+            int startIndex = str.IndexOf(start) + start.Length;
+            return str.Substring(startIndex, str.IndexOf(end) - startIndex);
+        }
+        public static string Substring(this string str, string start)
+        {
+            int startIndex = str.IndexOf(start) + start.Length;
+            return str.Substring(startIndex);
+        }
+        public static string SubstringUntil(this string str, string end)
+        {
+            return str.Substring(0, str.IndexOf(end));
+        }
     }   
 }

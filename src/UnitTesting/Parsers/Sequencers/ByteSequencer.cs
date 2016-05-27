@@ -16,7 +16,7 @@ namespace UnitTesting.Parsers
         
         public override bool Execute()
         {
-            return /*FunctionalTest() && ParsedTest() && DeepParsedTest() &&*/ Operators();
+            return FunctionalTest() && ParsedTest() && DeepParsedTest() && Operators();
         }
         
         protected bool Operators()

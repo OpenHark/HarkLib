@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Globalization;
 using System.Net.Sockets;
 using System.Linq;
@@ -11,10 +12,12 @@ namespace HarkLib.Net
     {
         public GhostMail()
         {
+            this.Headers = new Dictionary<string, string>();
             this.ContentType = "text/plain; charset=UTF-8";
             this.DestinationEMail = null;
             this.DestinationUser = null;
             this.DestinationPort = 25;
+            this.DestinationIP = null;
             this.Date = DateTime.Now;
             this.SourceEMail = null;
             this.SourceUser = null;
@@ -73,6 +76,12 @@ namespace HarkLib.Net
             set;
         }
         
+        public IPAddress DestinationIP
+        {
+            get;
+            set;
+        }
+        
         public int DestinationPort
         {
             get;
@@ -91,10 +100,17 @@ namespace HarkLib.Net
             set;
         }
         
+        public Dictionary<string, string> Headers
+        {
+            get;
+            set;
+        }
+        
         protected int WaitForResultCode(Stream stream)
         {
             byte[] bytes = new byte[1024];
-            stream.Read(bytes, 0, 1024);
+            if(stream.Read(bytes, 0, 1024) < 3)
+                return 0;
             
             byte[] bcode = new byte[]
             {
@@ -102,28 +118,49 @@ namespace HarkLib.Net
                 bytes[1],
                 bytes[2]
             };
+            
             return int.Parse(bcode.GetString());
         }
         
         public string GetMessage()
         {
-            return "From: \"" + SourceUser + "\" <" + SourceEMail + ">\r\n" +
-                "To: \"" + DestinationUser + "\" <" + DestinationEMail + ">\r\n" +
-                "Date: " + Date.ToString("ddd, dd MMM yyyy HH:mm:ss -0500", new CultureInfo("en")) + "\r\n" +
-                "MIME-Version: 1.0\r\n" +
-                "Content-type: " + ContentType + "\r\n" +
-                "Subject: " + Subject + "\r\n" + "\r\n" + Content;
+            Dictionary<string, string> hs = Headers ?? new Dictionary<string, string>();
+            
+            if(!hs.ContainsKey("From"))
+                hs.Add("From", "\"" + SourceUser + "\" <" + SourceEMail + ">");
+                
+            if(!hs.ContainsKey("To"))
+                hs.Add("To", "\"" + DestinationUser + "\" <" + DestinationEMail + ">");
+                
+            if(!hs.ContainsKey("Date"))
+                hs.Add("Date", Date.ToString("ddd, dd MMM yyyy HH:mm:ss -0500", new CultureInfo("en")));
+                
+            if(!hs.ContainsKey("MIME-Version"))
+                hs.Add("MIME-Version", "1.0");
+                
+            if(!hs.ContainsKey("Content-type"))
+                hs.Add("Content-type", ContentType);
+                
+            if(!hs.ContainsKey("Subject"))
+                hs.Add("Subject", Subject);
+            
+            string headers = hs
+                .Select(e => e.Key + ": " + e.Value)
+                .Aggregate("", (s1,s2) => s1 + s2 + "\r\n");
+            
+            return headers + "\r\n" + (this.Content ?? "");
         }
         
         public void Send()
         {
-            this.Content = this.Content ?? "";
-            
             Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             
-            IPAddress addr = Resolver.GetIPs(Resolver.GetMxRecords(DestinationHost.ToLower()).First()).First();
+            IPAddress addr = DestinationIP ?? Resolver.GetIPs(Resolver.GetMxRecords(DestinationHost.ToLower()).First()).First();
             
             socket.Connect(addr, DestinationPort);
+            
+            if(!socket.Connected)
+                throw new EMailTransmissionException(0, "CONNECTION " + addr + ":" + DestinationPort);
             
             Stream stream = new NetworkStream(socket);
             
@@ -151,13 +188,13 @@ namespace HarkLib.Net
             
             string content = GetMessage() + "\r\n.\r\n";
             
-            if((code = WaitForResultCode(stream)) != 250)
+            if((code = WaitForResultCode(stream)) != 354)
                 throw new EMailTransmissionException(code, "DATA");
             
             stream.Write(content.GetBytes());
             stream.Flush();
             
-            if((code = WaitForResultCode(stream)) != 354)
+            if((code = WaitForResultCode(stream)) != 250)
                 throw new EMailTransmissionException(code, "DATA-WRITE");
             
             stream.Write("QUIT\r\n".GetBytes());

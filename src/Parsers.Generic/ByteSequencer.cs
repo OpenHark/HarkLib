@@ -62,6 +62,24 @@ namespace HarkLib.Parsers.Generic
             return Parse(parser, input.GetBytes());
         }
         
+        public static bool TryParse(string parser, byte[] input, out ByteSequencer result)
+        {
+            try
+            {
+                result = new ByteSequencer(input).Eval(parser);
+                return true;
+            }
+            catch
+            {
+                result = null;
+                return false;
+            }
+        }
+        public static bool TryParse(string parser, string input, out ByteSequencer result)
+        {
+            return TryParse(parser, input.GetBytes(), out result);
+        }
+        
         protected bool Matches(string value, string regex, out Match match)
         {
             Regex rex = new Regex(regex, RegexOptions.Singleline);
