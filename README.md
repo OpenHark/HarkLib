@@ -23,6 +23,26 @@ This is a set of .NET libraries for advanced use.
 No contributor is responsible or liable for illegal use of
 this library.
 
+### Documentation
+
+| Library | Documentation |
+| --- | --- |
+| HarkLib.Parsers.Generic.dll | [[Delimiter Regular Expression (drex)|Delimiter-Regular-Expression-(drex)]] |
+| HarkLib.Parsers.dll | [[Document|NoLink]] |
+|  | [[HTML|NoLink]] |
+| HarkLib.Security.dll | [[AES|NoLink]] |
+|  | [[SecureConsole|NoLink]] |
+|  | [[SecurePassword|NoLink]] |
+| HarkLib.Core.dll | [[FileCache|NoLink]] |
+|  | [[FileSettings|NoLink]] |
+|  | [[UIDManager|NoLink]] |
+|  | [[Exceptions|NoLink]] |
+|  | [[Extensions|NoLink]] |
+| HarkLib.Net.dll | [[XML|NoLink]] |
+|  | [[Resolver|NoLink]] |
+|  | [[GhostMail|NoLink]] |
+|  | [[WebResource|NoLink]] |
+
 ## <a name="project-structure"></a>Project structure
 
 ```
@@ -35,12 +55,16 @@ HarkLib
     |:: Core            - C#
         |:: Exceptions
         |:: Extensions
+    |:: Net             - C#
+        |:: Exceptions
+        |:: WebResource
     |:: Parsers         - F#
     |:: Parsers.Generic - C#
         |:: Exceptions
     |:: Security        - C#
         |:: Extensions
     |:: UnitTesting     - C# for some unit tests
+        |:: Net
         |:: Parsers
             |:: Sequencers
         |:: Security
@@ -121,37 +145,38 @@ ParserResult root = new ByteSequencer("HTTP/1.1 404 Not found\r\nHeader1: data1\
     .Close();
 ```
 
-```csharp
-"[version: ]" // Everything until ' ' : called 'version'.
-"[i/code: ]" // Everything until ' ' casted into int : called 'code'.
-"[message:\r\n]" // Everything until '\r\n' : called 'message'.
-"[<headers:\r\n\r\n>]...[</>]" // Repeat '...' until '\r\n\r\n' : called headers.
-"[name::]" // Everything until ':' : called 'name'.
-"[|value|:\r\n|$]" // Everything until '\r\n' or until the end of the sequence, then trimmed : called 'value'.
-"[$s/body$]" // Everything until the end of the sequence, casted into string : called 'body'.
-"[$|body|$]" // Everything until the end of the sequence, casted into string and trimmed : called 'body'.
-"{[version: ]||[message:\r\n]}" // version matching or message matching.
-"{[version: ]||[subversion:--]||[message:\r\n]}" // version matching or subversion matching or message matching.
-"[HeaderName:x!\r\n]" // HeaderName ends when a 'x' is found and must not contain '\r\n'.
-"[Name]" // Add an empty entry called 'Name'.
-"[ba/Name]" // Add an empty byte array entry called 'Name'.
-"[Name=Content here]" // Add an entry called 'Name' with a value equals to 'Content here'.
-"[<Name>]" // Add an empty list entry called 'Name'.
-```
+| Operation | Description |
+| --- | --- |
+| `[version: ]` | Everything until ` ` : called `version`. |
+| `[i/code: ]` | Everything until ` ` casted into int : called `code`. |
+| `[message:\r\n]` | Everything until `\r\n` : called `message`. |
+| `[<headers:\r\n\r\n>]...[</>]` | Repeat `...` until `\r\n\r\n` : called headers. |
+| `[name::]` | Everything until `:` : called `name`. |
+| `[|value|:\r\n|$]` | Everything until `\r\n` or until the end of the sequence, then trimmed : called `value`. |
+| `[$s/body$]` | Everything until the end of the sequence, casted into string : called `body`. |
+| `[$|body|$]` | Everything until the end of the sequence, casted into string and trimmed : called `body`. |
+| `{[version: ]||[message:\r\n]}` | `version` matching or message matching. |
+| `{[version: ]||[subversion:--]||[message:\r\n]}` | `version` matching or subversion matching or message matching. |
+| `[HeaderName:x!\r\n]` | HeaderName ends when a `x` is found and must not contain `\r\n`. |
+| `[Name]` | Add an empty entry called `Name`. |
+| `[ba/Name]` | Add an empty byte array entry called `Name`. |
+| `[Name=Content here]` | Add an entry called `Name` with a value equals to `Content here`. |
+| `[<Name>]` | Add an empty list entry called `Name`. |
+
 
 #### <a name="usages-drex-types"></a>Types
 
-```csharp
-"404" => "[code: ]" => "404"
-"404" => "[s/code: ]" => "404"
-"404" => "[bi/code: ]" => new BigInteger(404)
-"404" => "[xi/code: ]" => 1028 (4 * 16 * 16 + 0 * 16 + 4)
-"404" => "[xbi/code: ]" => BigInteger.Parse("1028")
-"404" => "[i/code: ]" => 404
-"This is a text" => "[$s/body$]" => "This is a text"
-"  text  " => "[$|body|$]" => "text"
-"  404   " => "[$i/|body|$]" => 404
-```
+| Input | Operation | Result |
+| --- | --- | --- |
+| `404` | `[code: ]` | "404" |
+| `404` | `[s/code: ]` | "404" |
+| `404` | `[bi/code: ]` | new BigInteger(404) |
+| `404` | `[xi/code: ]` | 1028 (4 * 16 * 16 + 0 * 16 + 4) |
+| `404` | `[xbi/code: ]` | BigInteger.Parse("1028") |
+| `404` | `[i/code: ]` | 404 |
+| `This is a text` | `[$s/body$]` | "This is a text" |
+| `  text  ` | `[$|body|$]` | "text" |
+| `  404   ` | `[$i/|body|$]` | 404 |
 
 | Symbol | Name | Type | Operation |
 | --- | --- | --- | --- |
@@ -194,7 +219,7 @@ List<string> allValues = root.GetAll<string>("headers.<*>.value");
 - Parsers
   - [X] Add XML permissive parsing
 - Parsers.Generic
-  - [X] ByteSequencer : Create a better result parsing for 'or' (`{...|...}`)
+  - [X] ByteSequencer : Create a better result parsing for `or` (`{...|...}`)
   - [X] ByteSequencer : Add exclude pattern
   - [ ] Clean the files
   - [ ] Test in real situations
