@@ -11,7 +11,6 @@
     - [Types](#usages-drex-types)
     - [Results](#usages-drex-results)
 - [Tasks](#tasks)
-- [Future](#future)
 - [License](#license)
 
 ## <a name="introduction"></a>Introduction
@@ -27,21 +26,21 @@ this library.
 
 | Library | Documentation |
 | --- | --- |
-| HarkLib.Parsers.Generic.dll | [[Delimiter Regular Expression (drex)|Delimiter-Regular-Expression-(drex)]] |
-| HarkLib.Parsers.dll | [[Document|NoLink]] |
-|  | [[HTML|NoLink]] |
-| HarkLib.Security.dll | [[AES|NoLink]] |
-|  | [[SecureConsole|NoLink]] |
-|  | [[SecurePassword|NoLink]] |
-| HarkLib.Core.dll | [[FileCache|NoLink]] |
-|  | [[FileSettings|NoLink]] |
-|  | [[UIDManager|NoLink]] |
-|  | [[Exceptions|NoLink]] |
-|  | [[Extensions|NoLink]] |
-| HarkLib.Net.dll | [[XML|NoLink]] |
-|  | [[Resolver|NoLink]] |
-|  | [[GhostMail|NoLink]] |
-|  | [[WebResource|NoLink]] |
+| HarkLib.Parsers.Generic.dll | [Delimiter Regular Expression (drex)](https://github.com/OpenHark/HarkLib/wiki/Delimiter-Regular-Expression-(drex)) |
+| HarkLib.Parsers.dll | [Document](https://github.com/OpenHark/HarkLib/wiki/) |
+|  | [HTML](https://github.com/OpenHark/HarkLib/wiki/) |
+| HarkLib.Security.dll | [AES](https://github.com/OpenHark/HarkLib/wiki/) |
+|  | [SecureConsole](https://github.com/OpenHark/HarkLib/wiki/) |
+|  | [SecurePassword](https://github.com/OpenHark/HarkLib/wiki/) |
+| HarkLib.Core.dll | [FileCache](https://github.com/OpenHark/HarkLib/wiki/) |
+|  | [FileSettings](https://github.com/OpenHark/HarkLib/wiki/) |
+|  | [UIDManager](https://github.com/OpenHark/HarkLib/wiki/) |
+|  | [Exceptions](https://github.com/OpenHark/HarkLib/wiki/) |
+|  | [Extensions](https://github.com/OpenHark/HarkLib/wiki/) |
+| HarkLib.Net.dll | [XML](https://github.com/OpenHark/HarkLib/wiki/) |
+|  | [Resolver](https://github.com/OpenHark/HarkLib/wiki/) |
+|  | [GhostMail](https://github.com/OpenHark/HarkLib/wiki/) |
+|  | [WebResource](https://github.com/OpenHark/HarkLib/wiki/) |
 
 ## <a name="project-structure"></a>Project structure
 
