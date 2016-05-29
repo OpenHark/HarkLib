@@ -7,6 +7,15 @@ namespace HarkLib.Security
 {
     public static class AES
     {
+        public static void ProduceKeyIV(out byte[] key, out byte[] iv)
+        {
+            using(Aes aes = Aes.Create())
+            {
+                key = aes.Key;
+                iv = aes.IV;
+            }
+        }
+        
         public static CryptoStream GetEncrypter(byte[] key, byte[] iv, Stream destinationStream)
         {
             using(Aes aes = Aes.Create())

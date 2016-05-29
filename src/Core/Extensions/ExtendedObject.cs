@@ -11,5 +11,14 @@ namespace System.Linq
             else
                 return new TSource[] { source };
         }
+        
+        public static void To<TSource>(this TSource source, Action<TSource> action)
+        {
+            action(source);
+        }
+        public static TOut To<TSource, TOut>(this TSource source, Func<TSource, TOut> action)
+        {
+            return action(source);
+        }
     }
 }

@@ -59,8 +59,8 @@ namespace Compiler
                     .Replace("{DEST}", OutputFullPath)
                     .Replace("{TARGET}", Target)
                     .Replace("{FILES}", files)
-                    .Replace("{REFERENCES}", ReduceKey("/reference:", References))
-                    .Replace("{DOC}", GetBool("GenerateDoc") ? "/doc:" + DocFullPath : "");
+                    .Replace("{REFERENCES}", ReduceKey("--reference:", References))
+                    .Replace("{DOC}", GetBool("GenerateDoc") ? "--doc:" + DocFullPath : "");
                 
                 Die(Run(args));
                 filesToCompile.ToList().ForEach(Cache.Instance.Encache);

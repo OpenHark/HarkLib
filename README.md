@@ -6,14 +6,10 @@
 - [Project structure](#project-structure)
 - [Compilation](#compilation)
 - [Usages](#usages)
-  - [Delimiter Regular Expression (drex)](#usages-drex)
-    - [Parsing](#usages-drex-parsing)
-    - [Types](#usages-drex-types)
-    - [Results](#usages-drex-results)
 - [Tasks](#tasks)
 - [License](#license)
 
-## <a name="introduction"></a>Introduction
+## Introduction
 
 This is a set of .NET libraries for advanced use.
 
@@ -30,6 +26,7 @@ this library.
 | HarkLib.Parsers.dll | [Document](https://github.com/OpenHark/HarkLib/wiki/) |
 |  | [HTML](https://github.com/OpenHark/HarkLib/wiki/) |
 | HarkLib.Security.dll | [AES](https://github.com/OpenHark/HarkLib/wiki/) |
+|  | [RSA](https://github.com/OpenHark/HarkLib/wiki/) |
 |  | [SecureConsole](https://github.com/OpenHark/HarkLib/wiki/) |
 |  | [SecurePassword](https://github.com/OpenHark/HarkLib/wiki/) |
 | HarkLib.Core.dll | [FileCache](https://github.com/OpenHark/HarkLib/wiki/) |
@@ -42,7 +39,7 @@ this library.
 |  | [GhostMail](https://github.com/OpenHark/HarkLib/wiki/) |
 |  | [WebResource](https://github.com/OpenHark/HarkLib/wiki/) |
 
-## <a name="project-structure"></a>Project structure
+## Project structure
 
 ```
 HarkLib
@@ -73,7 +70,7 @@ HarkLib
 and weaknesses, I made the choice to combine both where I
 feel their are the better.
 
-## <a name="compilation"></a>Compilation
+## Compilation
 
 You need to have installed csc.exe (C# compiler) and fsc.exe
 (F# compiler). You need to have both compilers accessible in
@@ -108,112 +105,43 @@ the compilation. This way, no need to recompile the compiler to
 change the references added in each sub project, the output file
 names, etc...
 
-## <a name="usages"></a>Usages
+## Usages
 
-### <a name="usages-drex"></a>Delimiter Regular Expression (drex)
+If you are using a compiler, you can load one or many of the libraries
+provided by this project by adding a reference while compiling.
 
-#### <a name="usages-drex-parsing"></a>Parsing
+If you use the command line, you can compile a C# program with :
 
-```csharp
-using HarkLib.Parsers.Generic;
-/* [...] */
-
-ParserResult root = ByteSequencer.Parse(
-    "[version: ][i/code: ][message:\r\n][<headers:\r\n\r\n>][name::][|value|:\r\n|$][</>][$s/body$]",
-    "HTTP/1.1 404 Not found\r\nHeader1: data1\r\nHeader2: data2\r\n\r\nHello! This is the body!"
-).Close();
+```sh
+csc ... /reference:HarkLib.Core.dll /reference:HarkLib.Net ...
 ```
 
-```csharp
-using HarkLib.Parsers.Generic;
-/* [...] */
+For a F# program :
 
-ParserResult root = new ByteSequencer("HTTP/1.1 404 Not found\r\nHeader1: data1\r\nErrorHeader\r\nSet-Cookie: a=1\r\nSet-Cookie: b=2\r\nHeader2: data2\r\nErrorHeaderFinal\r\n\r\nHello! This is the body!")
-    .Until("version", " ")
-    .Until("code", " ", converter : s => int.Parse(s))
-    .Until("message", "\r\n")
-    .RepeatUntil("headers", "\r\n\r\n", b => b
-        .Or(bb => bb
-            .Until("name", ":", validator : s => !s.Contains("\r\n"))
-            .Until("value", "\r\n", converter : s => s.Trim()),
-            bb => bb
-            .Until("error", "\r\n"),
-            bb => bb
-            .ToEnd("final", converter : bs => bs.GetString())))
-    .ToEnd("body", converter : bs => bs.GetString())
-    .Close();
+```sh
+fsc ... --reference:HarkLib.Core.dll --reference:HarkLib.Net ...
 ```
 
-| Operation | Description |
-| --- | --- |
-| `[version: ]` | Everything until ` ` : called `version`. |
-| `[i/code: ]` | Everything until ` ` casted into int : called `code`. |
-| `[message:\r\n]` | Everything until `\r\n` : called `message`. |
-| `[<headers:\r\n\r\n>]...[</>]` | Repeat `...` until `\r\n\r\n` : called headers. |
-| `[name::]` | Everything until `:` : called `name`. |
-| `[|value|:\r\n|$]` | Everything until `\r\n` or until the end of the sequence, then trimmed : called `value`. |
-| `[$s/body$]` | Everything until the end of the sequence, casted into string : called `body`. |
-| `[$|body|$]` | Everything until the end of the sequence, casted into string and trimmed : called `body`. |
-| `{[version: ]||[message:\r\n]}` | `version` matching or message matching. |
-| `{[version: ]||[subversion:--]||[message:\r\n]}` | `version` matching or subversion matching or message matching. |
-| `[HeaderName:x!\r\n]` | HeaderName ends when a `x` is found and must not contain `\r\n`. |
-| `[Name]` | Add an empty entry called `Name`. |
-| `[ba/Name]` | Add an empty byte array entry called `Name`. |
-| `[Name=Content here]` | Add an entry called `Name` with a value equals to `Content here`. |
-| `[<Name>]` | Add an empty list entry called `Name`. |
+For a C++/CLI program :
 
-
-#### <a name="usages-drex-types"></a>Types
-
-| Input | Operation | Result |
-| --- | --- | --- |
-| `404` | `[code: ]` | "404" |
-| `404` | `[s/code: ]` | "404" |
-| `404` | `[bi/code: ]` | new BigInteger(404) |
-| `404` | `[xi/code: ]` | 1028 (4 * 16 * 16 + 0 * 16 + 4) |
-| `404` | `[xbi/code: ]` | BigInteger.Parse("1028") |
-| `404` | `[i/code: ]` | 404 |
-| `This is a text` | `[$s/body$]` | "This is a text" |
-| `  text  ` | `[$|body|$]` | "text" |
-| `  404   ` | `[$i/|body|$]` | 404 |
-
-| Symbol | Name | Type | Operation |
-| --- | --- | --- | --- |
-| `i/` | Integer | int | Parse |
-| `b/` | Byte | byte | Parse |
-| `x/` | Hexadecimal | int | Parse |
-| `s/` | String | string | Encode |
-| `ba/` | Byte array | byte[] | Encode or nothing |
-| `bi/` | BigInteger | BigInteger | Parse or initialize |
-| `sm/` | Stream | MemoryStream | Wrap or encode + wrap |
-| `xbi/` | Hexadecimal BigInteger | BigInteger | Parse |
-
-#### <a name="usages-drex-results"></a>Results
-
-```csharp
-string version = (string)root["version"];
-string version = root.GetString("version");
-string version = root.Get<string>("version");
-
-int code = (int)root["code"];
-int code = root.Get<int>("code");
-
-string value = root.Get<string>("headers.<0>.value");
-string value = root.Get<string>("headers.<name=Header1>.value");
-string value = root.Get<string>("headers.<|name=header1|>.value");
-
-List<string> values = root.GetAll<string>("headers.<$name=Set-Cookie$>.value");
-List<string> values = root.GetAll<string>("headers.<|$name=set-cookie$|>.value");
-
-List<string> values2 = root.GetAll<string>("headers.<name=Header1>.value");
-List<string> values2 = root.GetAll<string>("headers.<$name=Header1$>.value");
-List<string> values2 = root.GetAll<string>("headers.<|name=Header1|>.value");
-List<string> values2 = root.GetAll<string>("headers.<|$name=Header1$|>.value");
-
-List<string> allValues = root.GetAll<string>("headers.<*>.value");
+```sh
+link ... HarkLib.Code.dll ...
 ```
 
-## <a name="tasks"></a>Tasks
+If you are using Visual Studio, you can add it as a reference in
+you project. If you don't know how, you can follow this "[tutorial](https://msdn.microsoft.com/en-us/library/7314433t(v=vs.90).aspx)".
+
+If you want to use a library without referencing it, you can use
+the following way (here in C#) :
+
+```csharp
+Assembly assembly = Assembly.Load(AssemblyName.GetAssemblyName("HarkLib.Security.dll"));
+
+foreach(Type t in assembly.GetTypes())
+    Console.WriteLine(t.Name);
+```
+
+## Tasks
 
 - Parsers
   - [X] Add XML permissive parsing
@@ -223,8 +151,8 @@ List<string> allValues = root.GetAll<string>("headers.<*>.value");
   - [ ] Clean the files
   - [ ] Test in real situations
 - Security
-  - [ ] Add RSA
-  - [ ] Add anti-forcing system (slow generation - fast use)
+  - [X] Add RSA
+  - [X] Add "anti-forcing system" (slow generation)
 - Net
   - [ ] Add web client
   - [ ] Add web server
@@ -234,7 +162,7 @@ List<string> allValues = root.GetAll<string>("headers.<*>.value");
   - [ ] Add light web server for software interface
   - [ ] Add light webdav server for software interface
 
-## <a name="license"></a>License
+## License
 
 ![GNU AGPLv3](https://www.gnu.org/graphics/agplv3-155x51.png)
 

@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using System.Security;
 using System.IO;
 using System;
@@ -7,13 +6,13 @@ using HarkLib.Security;
 
 namespace UnitTesting.Security
 {
-    public class SecurityAES : ITest
+    public class SecurityRSA : ITest
     {
         public override string Name
         {
             get
             {
-                return "Security.AES";
+                return "Security.RSA";
             }
         }
         
@@ -21,19 +20,16 @@ namespace UnitTesting.Security
         {
             string text = "Hello!";
             
-            byte[] key;
-            byte[] iv;
+            RSAKeys keys = new RSAKeys();
             
-            AES.ProduceKeyIV(out key, out iv);
+            byte[] encryptedData = RSA.Encrypt(text.GetBytes(), keys);
             
-            byte[] encrypted = AES.Encrypt(text.GetBytes(), key, iv);
-            
-            if(encrypted.ToString() == text)
+            if(encryptedData.GetString() == text)
                 return false;
                 
-            byte[] decrypted = AES.Decrypt(encrypted, key, iv);
+            byte[] decryptedData = RSA.Decrypt(encryptedData, keys);
             
-            if(decrypted.GetString() != text)
+            if(decryptedData.GetString() != text)
                 return false;
             
             return true;
