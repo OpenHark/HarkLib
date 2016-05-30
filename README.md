@@ -25,6 +25,7 @@ this library.
 | HarkLib.Parsers.Generic.dll | [Delimiter Regular Expression (drex)](https://github.com/OpenHark/HarkLib/wiki/Delimiter-Regular-Expression-(drex)) |
 | HarkLib.Parsers.dll | [Document](https://github.com/OpenHark/HarkLib/wiki/) |
 |  | [HTML](https://github.com/OpenHark/HarkLib/wiki/) |
+|  | [XML](https://github.com/OpenHark/HarkLib/wiki/) |
 | HarkLib.Security.dll | [AES](https://github.com/OpenHark/HarkLib/wiki/) |
 |  | [RSA](https://github.com/OpenHark/HarkLib/wiki/) |
 |  | [SecureConsole](https://github.com/OpenHark/HarkLib/wiki/) |
@@ -34,10 +35,9 @@ this library.
 |  | [UIDManager](https://github.com/OpenHark/HarkLib/wiki/) |
 |  | [Exceptions](https://github.com/OpenHark/HarkLib/wiki/) |
 |  | [Extensions](https://github.com/OpenHark/HarkLib/wiki/) |
-| HarkLib.Net.dll | [XML](https://github.com/OpenHark/HarkLib/wiki/) |
-|  | [Resolver](https://github.com/OpenHark/HarkLib/wiki/) |
+| HarkLib.Net.dll | [Resolver](https://github.com/OpenHark/HarkLib/wiki/) |
 |  | [GhostMail](https://github.com/OpenHark/HarkLib/wiki/) |
-|  | [WebResource](https://github.com/OpenHark/HarkLib/wiki/) |
+|  | [WebResource](https://github.com/OpenHark/HarkLib/wiki/Web-Resource) |
 
 ## Project structure
 

@@ -106,6 +106,18 @@ namespace HarkLib.Net
             set;
         }
         
+        public string this[string name]
+        {
+            get
+            {
+                return Headers[name];
+            }
+            set
+            {
+                Headers[name] = value;
+            }
+        }
+        
         protected int WaitForResultCode(Stream stream)
         {
             byte[] bytes = new byte[1024];
