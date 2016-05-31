@@ -12,7 +12,7 @@ namespace HarkLib.Parsers.Generic
 {
     public class ByteSequencer : ISequencer<ByteSequencer>
     {
-        public ByteSequencer(byte[] data, int start = 0)
+        public ByteSequencer(byte[] data, int start)
         {
             this.data = data;
             
@@ -21,6 +21,9 @@ namespace HarkLib.Parsers.Generic
             this.currentIndex = start;
             this.IsExceptionThrower = true;
         }
+        public ByteSequencer(byte[] data)
+            : this(data, 0)
+        { }
         public ByteSequencer(string data)
             : this(data.GetBytes())
         { }
@@ -33,8 +36,7 @@ namespace HarkLib.Parsers.Generic
             
             Dictionary<string, object> tempDoc = bs.Document;
             
-            
-            this.current = Document;
+            this.Document= Document;
             
             this.IsClosable = bs.IsClosable;
             this.IsClosed = bs.IsClosed;
@@ -43,23 +45,12 @@ namespace HarkLib.Parsers.Generic
         private readonly byte[] data;
         private int currentIndex;
         
-        public static implicit operator ParserResult(ByteSequencer bs)
+        public override bool IsEmpty
         {
-            return new ParserResult(bs.Document);
-        }
-        
-        public static ByteSequencer operator | (ByteSequencer bs, string eval)
-        {
-            return bs.Eval(eval);
-        }
-        
-        public static ByteSequencer Parse(string parser, byte[] input)
-        {
-            return new ByteSequencer(input).Eval(parser);
-        }
-        public static ByteSequencer Parse(string parser, string input)
-        {
-            return Parse(parser, input.GetBytes());
+            get
+            {
+                return currentIndex >= data.Length;
+            }
         }
         
         protected int IndexOf(byte[] delimiter)
@@ -111,35 +102,11 @@ namespace HarkLib.Parsers.Generic
             return Slice(currentIndex, index + (addDelimiter ? delimiter.Length : 0));
         }
         
-        public static bool TryParse(string parser, byte[] input, out ByteSequencer result)
+        protected byte[] Slice(int start, int end)
         {
-            try
-            {
-                result = new ByteSequencer(input).Eval(parser);
-                return true;
-            }
-            catch
-            {
-                result = null;
-                return false;
-            }
-        }
-        public static bool TryParse(string parser, string input, out ByteSequencer result)
-        {
-            return TryParse(parser, input.GetBytes(), out result);
-        }
-        
-        public static readonly DREx<ByteSequencer> DREx = new DREx<ByteSequencer>();
-        
-        public override ByteSequencer Eval(string drex)
-        {
-            return DREx.Eval(this, drex);
-        }
-        
-        public Dictionary<string, object> current
-        {
-            get;
-            private set;
+            byte[] result = new byte[end - start];
+            Array.Copy(data, start, result, 0, result.Length);
+            return result;
         }
         
         public virtual ByteSequencer Reset()
@@ -147,27 +114,11 @@ namespace HarkLib.Parsers.Generic
             this.currentIndex = 0;
             
             this.Document = new Dictionary<string, object>();
-            this.current = Document;
             
             this.IsClosable = true;
             this.IsClosed = false;
             
             return this;
-        }
-        
-        public override bool IsEmpty
-        {
-            get
-            {
-                return currentIndex >= data.Length;
-            }
-        }
-        
-        protected byte[] Slice(int start, int end)
-        {
-            byte[] result = new byte[end - start];
-            Array.Copy(data, start, result, 0, result.Length);
-            return result;
         }
         
         public override ByteSequencer UntilAny(
@@ -193,6 +144,7 @@ namespace HarkLib.Parsers.Generic
             
             return Until(name, bestDelimiter, addDelimiter, converter, validator);
         }
+        
         public override ByteSequencer Until(
             string name,
             byte[] delimiter,
@@ -214,49 +166,13 @@ namespace HarkLib.Parsers.Generic
             if(!validator(slice))
                 throw new ValidatorException();
             
-            current[name] = converter(slice);
+            Document[name] = converter(slice);
             currentIndex += slice.Length - (addDelimiter ? delimiter.Length : 0) +  delimiter.Length;
             
             CloseIfEnd();
             return this;
         }
-        /*
-        public override ByteSequencer RepeatUntil(
-            string name,
-            byte[] delimiter,
-            Func<ByteSequencer, ByteSequencer> action,
-            bool addDelimiter = false)
-        {
-            ThrowIfClosed();
-            
-            byte[] slice = Slice(delimiter, addDelimiter);
-            if(slice == null)
-            {
-                NotFound(name);
-                return this;
-            }
-            currentIndex += slice.Length - (addDelimiter ? delimiter.Length : 0) + delimiter.Length;
-            
-            ByteSequencer bs;
-            List<Dictionary<string, object>> list = new List<Dictionary<string, object>>();
-            int index = 0;
-            do
-            {
-                bs = new ByteSequencer(slice, index);
-                action(bs);
-                if(index == bs.currentIndex)
-                    break;
-                list.Add(bs.Document);
-                
-                index = bs.currentIndex;
-                
-            } while(!bs.IsClosed);
-            
-            current[name] = list;
-            
-            CloseIfEnd();
-            return this;
-        }*/
+        
         public override ByteSequencer RepeatUntil(
             string name,
             byte[][] delimiters,
@@ -306,7 +222,7 @@ namespace HarkLib.Parsers.Generic
                 
             } while(!bs.IsClosed);
             
-            current[name] = list;
+            Document[name] = list;
             
             CloseIfEnd();
             return this;
@@ -325,7 +241,7 @@ namespace HarkLib.Parsers.Generic
                     if(String.IsNullOrEmpty(name))
                         this.Document = bs.Document;
                     else
-                        this.current[name] = bs.Document;
+                        this.Document[name] = bs.Document;
                     this.currentIndex = bs.currentIndex;
                     found = true;
                     
@@ -351,11 +267,11 @@ namespace HarkLib.Parsers.Generic
             
             if(this.IsClosed)
             {
-                current[name] = converter(new byte[0]);
+                Document[name] = converter(new byte[0]);
                 return this;
             }
             
-            current[name] = converter(Slice(currentIndex, data.Length));
+            Document[name] = converter(Slice(currentIndex, data.Length));
             
             this.currentIndex = data.Length;
             
@@ -363,10 +279,16 @@ namespace HarkLib.Parsers.Generic
             return this;
         }
         
-        public override ByteSequencer NoGroup(string value)
+        public override ByteSequencer NoGroup(byte[] value)
         {
-            if(!Slice(currentIndex, currentIndex + value.Length).GetString().StartsWith(value))
-                throw new NotFoundException(value);
+            if(data.Length - currentIndex < value.Length)
+                throw new NotFoundException("Group : " + value.GetString());
+            
+            byte[] slice = Slice(currentIndex, currentIndex + value.Length);
+            
+            for(int i = 0; i < slice.Length; ++i)
+                if(slice[i] != value[i])
+                    throw new NotFoundException("Group : " + value.GetString());
             
             return this;
         }

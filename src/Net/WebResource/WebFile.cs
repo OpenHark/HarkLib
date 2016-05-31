@@ -34,11 +34,6 @@ namespace HarkLib.Net
             }
         }
         
-        public void ClearCache()
-        {
-            _Content = null;
-        }
-        
         private byte[] _Content = null;
         public byte[] Content
         {
@@ -51,6 +46,11 @@ namespace HarkLib.Net
                 }
                 return _Content;
             }
+        }
+        
+        public void ClearCache()
+        {
+            _Content = null;
         }
     }
 }

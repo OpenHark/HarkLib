@@ -49,18 +49,16 @@ namespace HarkLib.Security
                     }
                 }
                 
-                this.bytes = ((nbHash - 1) & 1) == 0 ? data : tempData;
+                this.Bytes = ((nbHash - 1) & 1) == 0 ? data : tempData;
             }
             else
             {
                 for(int i = 0; i < nbHash - 1; ++i)
                     data = hasher.ComputeHash(data);
             
-                this.bytes = data;
+                this.Bytes = data;
             }
         }
-        
-        private readonly byte[] bytes;
         
         /// <summary>
         /// Secure form of the password.
@@ -69,10 +67,8 @@ namespace HarkLib.Security
         /// </summary>
         public byte[] Bytes
         {
-            get
-            {
-                return bytes;
-            }
+            get;
+            private set;
         }
         
         public void Dispose()

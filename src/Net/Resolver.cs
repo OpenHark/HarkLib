@@ -68,6 +68,22 @@ namespace HarkLib.Net
             DnsRecordListFree(entriesStartPtr, 0);
             return results.ToArray();
         }
+        
+        // https://msdn.microsoft.com/en-us/library/windows/desktop/ms682082(v=vs.85).aspx
+        [StructLayout(LayoutKind.Sequential)]
+        private struct Record
+        {
+            public IntPtr pNext;
+            public string pName;
+            public short wType;
+            public short wDataLength;
+            public int Flags;
+            public int dwTtl;
+            public int dwReserved;
+            public IntPtr pNameExchange;
+            public short wPreference;
+            public short Pad;
+        }
 
         // https://msdn.microsoft.com/en-us/library/windows/desktop/cc982162(v=vs.85).aspx
         public enum QueryOptions
@@ -159,22 +175,6 @@ namespace HarkLib.Net
             DNS_TYPE_WINS       = 0xff01,
             DNS_TYPE_WINSR      = 0xff02,
             DNS_TYPE_NBSTAT     = DNS_TYPE_WINSR
-        }
-
-        // https://msdn.microsoft.com/en-us/library/windows/desktop/ms682082(v=vs.85).aspx
-        [StructLayout(LayoutKind.Sequential)]
-        private struct Record
-        {
-            public IntPtr pNext;
-            public string pName;
-            public short wType;
-            public short wDataLength;
-            public int Flags;
-            public int dwTtl;
-            public int dwReserved;
-            public IntPtr pNameExchange;
-            public short wPreference;
-            public short Pad;
         }
     }
 }

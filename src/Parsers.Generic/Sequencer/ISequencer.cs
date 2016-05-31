@@ -16,9 +16,14 @@ namespace HarkLib.Parsers.Generic
         public ISequencer()
         {
             Document = new Dictionary<string, object>();
+            IsExceptionThrower = true;
+            IsClosable = true;
+            IsClosed = false;
         }
         
         protected static Func<byte[], object> Identity = x => x;
+        
+        protected readonly DREx<T> DREx = new DREx<T>();
         
         public Dictionary<string, object> Document
         {
@@ -44,6 +49,124 @@ namespace HarkLib.Parsers.Generic
             protected set;
         }
         
+        public abstract bool IsEmpty
+        {
+            get;
+        }
+        
+        public static T Parse(string parser, byte[] input)
+        {
+            return ((T)Activator.CreateInstance(typeof(T), input)).Eval(parser);
+        }
+        
+        public static T Parse(string parser, string input)
+        {
+            return ((T)Activator.CreateInstance(typeof(T), input)).Eval(parser);
+        }
+        
+        public static T Parse(string parser, Stream input)
+        {
+            return ((T)Activator.CreateInstance(typeof(T), input)).Eval(parser);
+        }
+        
+        public static bool TryParse(string parser, Stream input, out T result)
+        {
+            try
+            {
+                result = Parse(parser, input);
+                return true;
+            }
+            catch
+            {
+                result = null;
+                return false;
+            }
+        }
+        
+        public static bool TryParse(string parser, byte[] input, out T result)
+        {
+            try
+            {
+                result = Parse(parser, input);
+                return true;
+            }
+            catch
+            {
+                result = null;
+                return false;
+            }
+        }
+        
+        public static bool TryParse(string parser, string input, out T result)
+        {
+            try
+            {
+                result = Parse(parser, input);
+                return true;
+            }
+            catch
+            {
+                result = null;
+                return false;
+            }
+        }
+        
+        public abstract T UntilAny(
+            string name,
+            byte[][] delimiters,
+            bool addDelimiter = false,
+            Func<byte[], object> converter = null,
+            Func<byte[], bool> validator = null);
+            
+        public abstract T Until(
+            string name,
+            byte[] delimiter,
+            bool addDelimiter = false,
+            Func<byte[], object> converter = null,
+            Func<byte[], bool> validator = null);
+            
+        public abstract T RepeatUntil(
+            string name,
+            byte[][] delimiters,
+            Func<T, T> action,
+            bool addDelimiter = false,
+            Func<byte[], bool> validator = null);
+            
+        public abstract T Or(
+            string name,
+            params Func<T, T>[] actions);
+            
+        public abstract T ToEnd(
+            string name,
+            Func<byte[], object> converter = null);
+            
+        public abstract T NoGroup(byte[] value);
+        
+        
+        protected void CloseIfEnd()
+        {
+            if(!IsClosable)
+                return;
+            
+            if(IsEmpty)
+                IsClosed = true;
+        }
+        
+        protected void NotFound(string name, object value = null)
+        {
+            Close();
+            
+            if(IsExceptionThrower)
+                throw new NotFoundException("Can't match \"" + name + "\".");
+            
+            Document[name] = value ?? new byte[0];
+        }
+        
+        public T Eval(string drex)
+        {
+            return DREx.Eval((T)this, drex);
+        }
+        
         public T ToClosable(bool isClosable)
         {
             this.IsClosable = isClosable;
@@ -67,20 +190,6 @@ namespace HarkLib.Parsers.Generic
             return (T)this;
         }
         
-        protected void CloseIfEnd()
-        {
-            if(!IsClosable)
-                return;
-            
-            if(IsEmpty)
-                IsClosed = true;
-        }
-        
-        public abstract bool IsEmpty
-        {
-            get;
-        }
-        
         public T ThrowIfEmpty()
         {
             if(IsEmpty)
@@ -97,23 +206,6 @@ namespace HarkLib.Parsers.Generic
             return (T)this;
         }
         
-        
-        protected void NotFound(string name, object value = null)
-        {
-            Close();
-            
-            if(IsExceptionThrower)
-                throw new NotFoundException("Can't match \"" + name + "\".");
-            
-            Document[name] = value ?? new byte[0];
-        }
-        
-        public abstract T UntilAny(
-            string name,
-            byte[][] delimiters,
-            bool addDelimiter = false,
-            Func<byte[], object> converter = null,
-            Func<byte[], bool> validator = null);
         public T UntilAny(
             string name,
             byte[] delimiters,
@@ -126,6 +218,7 @@ namespace HarkLib.Parsers.Generic
                 addDelimiter,
                 converter);
         }
+        
         public T UntilAny(
             string name,
             string[] delimiters,
@@ -146,10 +239,6 @@ namespace HarkLib.Parsers.Generic
             );
         }
         
-        
-        
-        
-            
         public T Until(
             string name,
             byte delimiter,
@@ -164,12 +253,7 @@ namespace HarkLib.Parsers.Generic
                 converter,
                 validator);
         }
-        public abstract T Until(
-            string name,
-            byte[] delimiter,
-            bool addDelimiter = false,
-            Func<byte[], object> converter = null,
-            Func<byte[], bool> validator = null);
+        
         public T Until(
             string name,
             char delimiter,
@@ -184,6 +268,7 @@ namespace HarkLib.Parsers.Generic
                 converter,
                 validator);
         }
+        
         public T Until(
             string name,
             string delimiter,
@@ -203,12 +288,6 @@ namespace HarkLib.Parsers.Generic
             );
         }
         
-        public abstract T RepeatUntil(
-            string name,
-            byte[][] delimiters,
-            Func<T, T> action,
-            bool addDelimiter = false,
-            Func<byte[], bool> validator = null);
         public T RepeatUntil(
             string name,
             byte delimiter,
@@ -223,6 +302,7 @@ namespace HarkLib.Parsers.Generic
                 addDelimiter,
                 validator);
         }
+        
         public T RepeatUntil(
             string name,
             char delimiter,
@@ -239,6 +319,7 @@ namespace HarkLib.Parsers.Generic
                 addDelimiter,
                 validator : b => validator(b.GetString()));
         }
+        
         public T RepeatUntil(
             string name,
             string delimiter,
@@ -253,6 +334,7 @@ namespace HarkLib.Parsers.Generic
                 addDelimiter,
                 validator);
         }
+        
         public T RepeatUntil(
             string name,
             string[] delimiters,
@@ -284,16 +366,10 @@ namespace HarkLib.Parsers.Generic
             return (T)this;
         }
         
-        public abstract T Or(string name, params Func<T, T>[] actions);
         public T Or(params Func<T, T>[] actions)
         {
             return Or(null, actions);
         }
-        
-        
-        public abstract T ToEnd(
-            string name,
-            Func<byte[], object> converter = null);
         
         public ParserResult Close()
         {
@@ -301,8 +377,19 @@ namespace HarkLib.Parsers.Generic
             return new ParserResult(this.Document);
         }
         
-        public abstract T NoGroup(string value);
+        public T NoGroup(string value)
+        {
+            return NoGroup(value.ToCharArray().Select(b => (byte)b).ToArray());
+        }
         
-        public abstract T Eval(string drex);
+        public static implicit operator ParserResult(ISequencer<T> bs)
+        {
+            return new ParserResult(bs.Document);
+        }
+        
+        public static ISequencer<T> operator | (ISequencer<T> bs, string eval)
+        {
+            return bs.Eval(eval);
+        }
     }
 }

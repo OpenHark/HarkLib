@@ -19,10 +19,12 @@ namespace HarkLib.Parsers.Generic
             match = rex.Match(value);
             return match.Success;
         }
+        
         protected string[] ParseDelimiter(string delimiter)
         {
             return delimiter.Replace("\\!", "!").SplitNotEscaped('|').ToArray();
         }
+        
         protected object ParseType(string type, byte[] data)
         {
             if(type.Length == 0)
@@ -58,6 +60,7 @@ namespace HarkLib.Parsers.Generic
                     throw new UnrecognizedTypeException("Can't understand the type \"" + type + "\"");
             }
         }
+        
         protected object ParseType(string type, string data)
         {
             if(type.Length == 0)
@@ -93,6 +96,7 @@ namespace HarkLib.Parsers.Generic
                     throw new UnrecognizedTypeException("Can't understand the type \"" + type + "\"");
             }
         }
+        
         protected string[] SplitDelim(string delim)
         {
             string[] sd = delim.SplitNotEscaped('!', nbMax : 2).ToArray();
@@ -100,6 +104,7 @@ namespace HarkLib.Parsers.Generic
                 return new string[] { sd[0], "" };
             return sd;
         }
+        
         public T Eval(T obj, string value)
         {
             Match m;
@@ -202,6 +207,5 @@ namespace HarkLib.Parsers.Generic
             
             throw new CommandNotRecognizedException("Can't parse \"" + value + "\"");
         }
-        
     }
 }

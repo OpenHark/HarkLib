@@ -48,20 +48,6 @@ namespace HarkLib.Net
             }
         }
         
-        public void ClearCache()
-        {
-            _Directories = null;
-            _Resources = null;
-            _Files = null;
-        }
-        
-        protected virtual IEnumerable<Tuple<string, string>> ParseRaw(IEnumerable<string> raw)
-        {
-            return raw
-                .Select(s => s.Substring("href=\""))
-                .Select(s => new Tuple<string, string>(Path.Combine(Url, s.SubstringUntil("\">")), s.Substring("\">", "</a>")));
-        }
-        
         private List<WebDirectory> _Directories = null;
         public List<WebDirectory> Directories
         {
@@ -110,6 +96,20 @@ namespace HarkLib.Net
                 }
                 return _Resources;
             }
+        }
+        
+        protected virtual IEnumerable<Tuple<string, string>> ParseRaw(IEnumerable<string> raw)
+        {
+            return raw
+                .Select(s => s.Substring("href=\""))
+                .Select(s => new Tuple<string, string>(Path.Combine(Url, s.SubstringUntil("\">")), s.Substring("\">", "</a>")));
+        }
+        
+        public void ClearCache()
+        {
+            _Directories = null;
+            _Resources = null;
+            _Files = null;
         }
     }
 }

@@ -3,8 +3,6 @@ using System.Reflection;
 using System.Linq;
 using System;
 
-using HarkLib.Core;
-
 namespace UnitTesting
 {
     public class Program

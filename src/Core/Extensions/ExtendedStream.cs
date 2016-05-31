@@ -158,5 +158,10 @@ namespace System.IO
             
             return data;
         }
+        
+        public static HarkLib.Core.SplitStream[] Split(this Stream stream, int nb)
+        {
+            return new HarkLib.Core.StreamSplitter(stream, nb).Streams;
+        }
     }   
 }

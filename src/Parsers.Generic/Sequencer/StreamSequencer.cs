@@ -25,15 +25,76 @@ namespace HarkLib.Parsers.Generic
             this.Document = new Dictionary<string, object>();
         }
         
-        private readonly Stream stream;
-        
         private bool EndOfStream = false;
+        private Stream stream;
         
         public override bool IsEmpty
         {
             get
             {
                 return EndOfStream;
+            }
+        }
+        
+        protected byte[] Slice(
+            string name,
+            byte[][] ends,
+            bool addDelimiter = false)
+        {
+            for(int i = 0; i < ends.Length; ++i)
+                if(ends[i].Length == 1 && ends[i][0] == '$')
+                    ends[i] = null;
+            
+            using(MemoryStream ms = new MemoryStream())
+            {
+                int value = -1;
+                int[] endIndexes = new int[ends.Length];
+                int lastFound = -1;
+                bool exit = false;
+                while(!exit && (value = stream.ReadByte()) != -1)
+                {
+                    lastFound = -1;
+                    for(int i = 0; i < ends.Length; ++i)
+                    {
+                        if(ends[i] == null)
+                            lastFound = i;
+                        else if(value == ends[i][endIndexes[i]])
+                        {
+                            ++endIndexes[i];
+                            lastFound = i;
+                            if(endIndexes[i] == ends[i].Length)
+                            {
+                                exit = true;
+                                break;
+                            }
+                        }
+                    }
+                        
+                    if(lastFound == -1)
+                    {
+                        for(int i = 0; i < endIndexes.Length; ++i)
+                            endIndexes[i] = 0;
+                    }
+                    
+                    ms.WriteByte((byte)value);
+                }
+                
+                if(value == -1)
+                {
+                    EndOfStream = true;
+                    if(lastFound == -1 || ends[lastFound] != null)
+                        NotFound(name);
+                }
+                
+                byte[] result = ms.ToArray();
+                if(!addDelimiter && ends[lastFound] != null)
+                {
+                    byte[] newResult = new byte[result.Length - ends[lastFound].Length];
+                    Array.Copy(result, 0, newResult, 0, newResult.Length);
+                    result = newResult;
+                }
+                
+                return result;
             }
         }
         
@@ -105,61 +166,6 @@ namespace HarkLib.Parsers.Generic
             return this;
         }
         
-        protected byte[] Slice(
-            string name,
-            byte[][] ends,
-            bool addDelimiter = false)
-        {
-            using(MemoryStream ms = new MemoryStream())
-            {
-                int value = -1;
-                int[] endIndexes = new int[ends.Length];
-                int lastFound = -1;
-                bool exit = false;
-                while(!exit && (value = stream.ReadByte()) != -1)
-                {
-                    lastFound = -1;
-                    for(int i = 0; i < ends.Length; ++i)
-                    {
-                        if(value == ends[i][endIndexes[i]])
-                        {
-                            ++endIndexes[i];
-                            lastFound = i;
-                            if(endIndexes[i] == ends[i].Length)
-                            {
-                                exit = true;
-                                break;
-                            }
-                        }
-                    }
-                        
-                    if(lastFound == -1)
-                    {
-                        for(int i = 0; i < endIndexes.Length; ++i)
-                            endIndexes[i] = 0;
-                    }
-                    
-                    ms.WriteByte((byte)value);
-                }
-                
-                if(value == -1)
-                {
-                    EndOfStream = true;
-                    NotFound(name);
-                }
-                
-                byte[] result = ms.ToArray();
-                if(!addDelimiter)
-                {
-                    byte[] newResult = new byte[result.Length - ends[lastFound].Length];
-                    Array.Copy(result, 0, newResult, 0, newResult.Length);
-                    result = newResult;
-                }
-                
-                return result;
-            }
-        }
-        
         public override StreamSequencer UntilAny(
             string name,
             byte[][] ends,
@@ -188,7 +194,6 @@ namespace HarkLib.Parsers.Generic
             return this;
         }
         
-        
         public override StreamSequencer RepeatUntil(
             string name,
             byte[][] delimiters,
@@ -209,11 +214,13 @@ namespace HarkLib.Parsers.Generic
                 List<Dictionary<string, object>> data = new List<Dictionary<string, object>>();
                 
                 StreamSequencer ss;
+                Stream currentStream = ms;
                 do
                 {
-                    ss = new StreamSequencer(ms);
+                    ss = new StreamSequencer(currentStream);
                     action(ss);
                     data.Add(ss.Document);
+                    currentStream = ss.stream;
                 } while(!ss.IsClosed);
                 
                 Document[name] = data;
@@ -246,99 +253,50 @@ namespace HarkLib.Parsers.Generic
             return this;
         }
         
-        
-        public StreamSequencer NoGroup(byte[] value)
+        public override StreamSequencer NoGroup(byte[] value)
         {
             for(int i = 0; i < value.Length; ++i)
             {
                 if(stream.ReadByte() != (int)value[i])
-                    throw new NotFoundException();
+                    throw new NotFoundException("Group : " + value.GetString());
             }
             
             return this;
         }
-        public override StreamSequencer NoGroup(string value)
-        {
-            return NoGroup(value.ToCharArray().Cast<byte>().ToArray());
-        }
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        public static implicit operator ParserResult(StreamSequencer bs)
-        {
-            return new ParserResult(bs.Document);
-        }
-        
-        public static StreamSequencer operator | (StreamSequencer bs, string eval)
-        {
-            return bs.Eval(eval);
-        }
-        
-        public static StreamSequencer Parse(string parser, Stream input)
-        {
-            return new StreamSequencer(input).Eval(parser);
-        }
-        public static StreamSequencer Parse(string parser, byte[] input)
-        {
-            return Parse(parser, new MemoryStream(input));
-        }
-        public static StreamSequencer Parse(string parser, string input)
-        {
-            return Parse(parser, input.GetBytes());
-        }
-        
-        public static bool TryParse(string parser, Stream input, out StreamSequencer result)
-        {
-            try
-            {
-                result = new StreamSequencer(input).Eval(parser);
-                return true;
-            }
-            catch
-            {
-                result = null;
-                return false;
-            }
-        }
-        public static bool TryParse(string parser, byte[] input, out StreamSequencer result)
-        {
-            return TryParse(parser, new MemoryStream(input), out result);
-        }
-        public static bool TryParse(string parser, string input, out StreamSequencer result)
-        {
-            return TryParse(parser, input.GetBytes(), out result);
-        }
-        
-        public static readonly DREx<StreamSequencer> DREx = new DREx<StreamSequencer>();
-        
-        public override StreamSequencer Eval(string drex)
-        {
-            return DREx.Eval(this, drex);
-        }
         
         public override StreamSequencer Or(string name, params Func<StreamSequencer, StreamSequencer>[] actions)
         {
-            throw new NotImplementedException();
+            SplitStream[] streams = stream.Split(actions.Length);
+            
+            for(int i = 0; i < actions.Length; ++i)
+                try
+                {
+                    StreamSequencer ss = new StreamSequencer(streams[i]);
+                    actions[i](ss);
+                    
+                    if(String.IsNullOrEmpty(name))
+                        this.Document = ss.Document;
+                    else
+                        this.Document[name] = ss.Document;
+                    
+                    this.stream = streams[i];
+                    
+                    streams[i].Select();
+                    EndOfStream = streams[i].IsEndOfStream;
+                    
+                    CloseIfEnd();
+                    return this;
+                }
+                catch(NotFoundException)
+                { }
+                catch(ClosedSequencerException)
+                { }
+                catch(ValidatorException)
+                { }
+            
+            NotFound("Or");
+            CloseIfEnd();
+            return this;
         }
     }
 }

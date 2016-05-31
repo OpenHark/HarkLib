@@ -44,7 +44,33 @@ namespace HarkLib.Core
                 .ToDictionary(ss => ss[0], ss => ss[1]);
         }
         
-        public static readonly string[] DefaultYesValues = new string[] { "y", "yes", "true", "on" };
+        public static readonly string[] DefaultYesValues = new string[]
+        {
+            "y",
+            "yes",
+            "true",
+            "on"
+        };
+        
+        public string this[string key]
+        {
+            get
+            {
+                return Get(key, null);
+            }
+        }
+        
+        public Dictionary<string, string> Map
+        {
+            get;
+            private set;
+        }
+        
+        public string[] YesValues
+        {
+            get;
+            set;
+        }
         
         private static bool IterateTransform(List<string[]> ml)
         {
@@ -65,6 +91,7 @@ namespace HarkLib.Core
             
             return changed;
         }
+        
         private static List<string[]> ReplaceEachOther(List<string[]> strs, int nb = 5)
         {
             for(int i = 0; i < nb; ++i)
@@ -74,26 +101,6 @@ namespace HarkLib.Core
             }
             
             return strs;
-        }
-        
-        public string this[string key]
-        {
-            get
-            {
-                return Get(key, null);
-            }
-        }
-        
-        public Dictionary<string, string> Map
-        {
-            get;
-            private set;
-        }
-        
-        public string[] YesValues
-        {
-            get;
-            set;
         }
         
         public int GetInt(string key, int defaultValue = 0)

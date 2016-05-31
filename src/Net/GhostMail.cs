@@ -25,6 +25,18 @@ namespace HarkLib.Net
             this.Content = null;
         }
         
+        public string this[string name]
+        {
+            get
+            {
+                return Headers[name];
+            }
+            set
+            {
+                Headers[name] = value;
+            }
+        }
+        
         public string DestinationEMail
         {
             get;
@@ -35,21 +47,6 @@ namespace HarkLib.Net
         {
             get;
             set;
-        }
-        
-        public string DestinationHost
-        {
-            get
-            {
-                return DestinationEMail.Substring(DestinationEMail.IndexOf('@') + 1);
-            }
-        }
-        public string SourceHost
-        {
-            get
-            {
-                return SourceEMail.Substring(SourceEMail.IndexOf('@') + 1);
-            }
         }
         
         public string SourceUser
@@ -106,15 +103,19 @@ namespace HarkLib.Net
             set;
         }
         
-        public string this[string name]
+        public string DestinationHost
         {
             get
             {
-                return Headers[name];
+                return DestinationEMail.Substring(DestinationEMail.IndexOf('@') + 1);
             }
-            set
+        }
+        
+        public string SourceHost
+        {
+            get
             {
-                Headers[name] = value;
+                return SourceEMail.Substring(SourceEMail.IndexOf('@') + 1);
             }
         }
         

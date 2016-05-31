@@ -13,7 +13,7 @@ open System
 /// the document.
 /// </summary>
 module public XML =
-    type internal StackValues =
+    type private StackValues =
     | TagOpen of string
     | AttributeName of string
     | AttributeValue of string
@@ -23,7 +23,7 @@ module public XML =
     | Text of string
     | Comment of string
     
-    let internal StackValuesToString = function
+    let private StackValuesToString = function
     | TagOpen(name) -> "TagOpen(" + name + ")"
     | AttributeName(name) -> "AttributeName(" + name + ")"
     | AttributeValue(value) -> "AttributeValue(" + value + ")"

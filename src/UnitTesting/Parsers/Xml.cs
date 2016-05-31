@@ -43,8 +43,6 @@ namespace UnitTesting.Parsers
                 doc.ElementsByTagName("documentation")
                     .ForEach(e => Console.WriteLine(" :: " + e));
             }
-            Console.WriteLine("*********************");
-            doc.ElementsByTagName("?xml").First().Attributes.ForEach(s => Console.WriteLine(s));
             
             if(doc.ElementsByTagName("documentation").Count() != 5)
                 return false;

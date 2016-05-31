@@ -7,10 +7,14 @@ using System;
 
 namespace HarkLib.Security
 {
+    /// <summary>
+    /// Provides some tools for console password reading.
+    /// </summary>
     public static class SecureConsole
     {
         /// <summary>
-        /// Read from the standard input a password and store it in a SecureString.
+        /// Read from the standard input a password and store it
+        /// in a SecureString.
         /// </summary>
         /// <note>
         /// Better use <b>ReadSecurePassword</b> instead.
@@ -46,7 +50,8 @@ namespace HarkLib.Security
         }
         
         /// <summary>
-        /// Read from the standard input a password and store it in a SecurePassword.
+        /// Read from the standard input a password and store
+        /// it in a SecurePassword.
         /// </summary>
         public static SecurePassword ReadSecurePassword(char c = '*', int nbHashIterations = 500000)
         {

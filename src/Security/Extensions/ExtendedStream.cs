@@ -8,6 +8,10 @@ namespace System.IO
 {
     public static class ExtendedStream
     {
+        /// <summary>
+        /// Write RSA parameters, i.e. D, DP, DQ, Exponnent,
+        /// Inverse Q, Modulus P and Q.
+        /// </summary>
         public static void Write(this Stream stream, RSAParameters parameters)
         {
             stream.WriteWrapped(parameters.D);
@@ -20,6 +24,10 @@ namespace System.IO
             stream.WriteWrapped(parameters.Q);
         }
         
+        /// <summary>
+        /// Read RSA parameters, i.e. D, DP, DQ, Exponnent,
+        /// Inverse Q, Modulus P and Q.
+        /// </summary>
         public static RSAParameters ReadRSAParameters(this Stream stream)
         {
             RSAParameters parameters = new RSAParameters();

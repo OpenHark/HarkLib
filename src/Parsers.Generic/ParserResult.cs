@@ -17,6 +17,14 @@ namespace HarkLib.Parsers.Generic
             this.Dictionary = data;
         }
         
+        public object this[string path]
+        {
+            get
+            {
+                return find(path.Split('.'), 0, Dictionary);
+            }
+        }
+        
         public Dico Dictionary
         {
             get;
@@ -50,7 +58,7 @@ namespace HarkLib.Parsers.Generic
             {
                 currentName = currentName.Substring(1, currentName.Length - 2);
                 
-                var list = obj as ListDico;
+                ListDico list = obj as ListDico;
                 
                 if(currentName.Contains("="))
                 {
@@ -137,13 +145,6 @@ namespace HarkLib.Parsers.Generic
             
             return find(names, index, submap);
         }
-        public object this[string path]
-        {
-            get
-            {
-                return find(path.Split('.'), 0, Dictionary);
-            }
-        }
         
         public ListDico GetList(string path)
         {
@@ -204,6 +205,7 @@ namespace HarkLib.Parsers.Generic
             
             return map;
         }
+        
         public Dictionary<string, List<object>> GetFlatMap(string listPath, string keyName)
         {
             return GetFlatMap<object>(listPath, keyName);
@@ -238,6 +240,7 @@ namespace HarkLib.Parsers.Generic
             
             return map;
         }
+        
         public Dictionary<string, object> GetFlatFlatMap(string listPath, string keyName)
         {
             return GetFlatFlatMap<object>(listPath, keyName);

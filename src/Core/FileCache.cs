@@ -33,6 +33,18 @@ namespace HarkLib.Core
         private readonly Dictionary<string, string> cache;
         private readonly object mutex = new object();
         
+        public bool Enable
+        {
+            get;
+            set;
+        }
+        
+        public string CacheFilePath
+        {
+            get;
+            private set;
+        }
+        
         protected string FormatPath(string path)
         {
             path = path.Trim().Replace("\\", "/");
@@ -59,18 +71,6 @@ namespace HarkLib.Core
             string hash = Hash(filePath);
             lock(mutex)
                 cache[filePath] = hash;
-        }
-        
-        public bool Enable
-        {
-            get;
-            set;
-        }
-        
-        public string CacheFilePath
-        {
-            get;
-            private set;
         }
         
         public bool Changed(string filePath)

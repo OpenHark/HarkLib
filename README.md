@@ -81,13 +81,13 @@ Ctrl+Shift+B. It will run the command 'make'.
 
 If you are not using Visual Studio Code, open a terminal on
 the root folder (where there is the file **makefile**) and run
-the following command : ` make ` or with full specification :
-` make build `.
+the following command : `make` or with full specification :
+`make build`.
 
-If you want to clean the project, you can run ` make clean `.
+If you want to clean the project, you can run `make clean`.
 
 If you want to clean the project and compile just after, please
-run ` make clean build `.
+run `make clean build`.
 
 The **.make** folder contains the source code (C#) of the solution
 compiler. If needed, you can recompile it.
@@ -143,19 +143,27 @@ foreach(Type t in assembly.GetTypes())
 
 ## Tasks
 
+- Core
+  - [ ] Add doc comments
 - Parsers
   - [X] Add XML permissive parsing
+  - [X] Add doc comments
+  - [ ] Add XPath parsing
+  - [ ] Add XPath parsing doc comments
 - Parsers.Generic
   - [X] ByteSequencer : Create a better result parsing for `or` (`{...|...}`)
   - [X] ByteSequencer : Add exclude pattern
-  - [ ] Clean the files
+  - [X] Clean the files
   - [ ] Test in real situations
+  - [ ] Add doc comments
 - Security
   - [X] Add RSA
   - [X] Add "anti-forcing system" (slow generation)
+  - [X] Add doc comments
 - Net
   - [ ] Add web client
   - [ ] Add web server
+  - [ ] Add doc comments
   - [ ] Add webdav server
   - [X] Add ghost mail system
   - [ ] Add web directory browser

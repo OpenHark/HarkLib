@@ -21,12 +21,22 @@ type Comment(value : string) =
         override this.ToString() = "<!--" + value + "-->"
     end
     
+/// <summary>
+/// Entity with children.
+/// </summary>
 [<AbstractClass>]
 type IElement() =
     class
         let children = new List<Object>()
+        
+        /// <summary>
+        /// List of children.
+        /// </summary>
         member this.Children = children
         
+        /// <summary>
+        /// Flat list of children and grandchildren, etc.
+        /// </summary>
         member this.FlatChildren = seq {
             for c in this.Children do
                 yield c
@@ -51,6 +61,9 @@ type IElement() =
             this.ToString(sb)
             sb.ToString()
         
+        /// <summary>
+        /// List elements by tag name.
+        /// </summary>
         member this.ElementsByTagName(tagName : string) = seq {
             let name = tagName.Trim().ToLower()
             for e in this.Elements do
@@ -59,6 +72,9 @@ type IElement() =
                     yield e
         }
         
+        /// <summary>
+        /// List elements by attribute name and value.
+        /// </summary>
         member this.ElementsByAttribute(attrName : string, value : string) = seq {
             let name = attrName.Trim().ToLower()
             for e in this.Elements do
