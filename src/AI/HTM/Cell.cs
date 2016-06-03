@@ -3,7 +3,7 @@ using System.Collections;
 using System.Linq;
 using System;
 
-namespace HarkLib.AI
+namespace HarkLib.AI.old
 {
     // http://numenta.com/assets/pdf/whitepapers/hierarchical-temporal-memory-cortical-learning-algorithm-0.2.1-en.pdf
     public class Cell

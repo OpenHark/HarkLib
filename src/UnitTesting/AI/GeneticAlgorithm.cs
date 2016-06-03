@@ -45,7 +45,7 @@ namespace UnitTesting.AI
             protected override void Initialize(Genome<byte> genome)
             {
                 for(int i = 0; i < ChromoLength; ++i)
-                    genome.Weights[i] = (byte)Random.Next(0, 255);
+                    genome.Values[i] = (byte)Random.Next(0, 255);
             }
         }
         
@@ -65,7 +65,7 @@ namespace UnitTesting.AI
                 foreach(Genome<byte> g in ga.Epoch())
                 {
                     g.Fitness = g
-                        .Weights
+                        .Values
                         .Select((b,i) => 254 * 254 - ((int)b - aim[i]) * ((int)b - aim[i]))
                         .Sum() / (double)(254 * 254 * nbChars);
                 }
@@ -74,7 +74,7 @@ namespace UnitTesting.AI
             if(IsVerbose)
             {
                 Console.WriteLine("   BEST : " + ga.BestFitnessEver);
-                Console.WriteLine(ga.BestFitnessGenomeEver.Weights.Select(b => (char)b).Aggregate("", (c1,c2) => c1 + c2));
+                Console.WriteLine(ga.BestFitnessGenomeEver.Values.Select(b => (char)b).Aggregate("", (c1,c2) => c1 + c2));
             }
             
             if(ga.BestFitnessEver < 1)
