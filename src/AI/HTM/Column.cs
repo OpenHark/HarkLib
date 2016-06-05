@@ -3,7 +3,7 @@ using System.Collections;
 using System.Linq;
 using System;
 
-namespace HarkLib.AI.old
+namespace HarkLib.AI
 {
     // http://numenta.com/assets/pdf/whitepapers/hierarchical-temporal-memory-cortical-learning-algorithm-0.2.1-en.pdf
     public class Column : IInput
@@ -12,6 +12,7 @@ namespace HarkLib.AI.old
         {
             this.Synapses = new List<Synapse>();
             this.Boost = 1.0;
+            this.Cells = new List<Cell>();
         }
         
         private bool _Value = false;
@@ -23,7 +24,7 @@ namespace HarkLib.AI.old
             }
             set
             {
-                _Value = true;
+                _Value = value;
                 
                 DutyCycle = (DutyCycle * nbDutyCycle + (_Value ? 1 : 0)) / (nbDutyCycle + 1);
                 ++nbDutyCycle;

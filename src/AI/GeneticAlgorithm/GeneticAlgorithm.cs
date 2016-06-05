@@ -3,6 +3,8 @@ using System.Collections;
 using System.Linq;
 using System;
 
+using HarkLib.Core;
+
 namespace HarkLib.AI
 {
     public abstract class GeneticAlgorithm<T>
@@ -36,7 +38,7 @@ namespace HarkLib.AI
         }
         
         protected static readonly ReverseGenomeComparer<T> Comparer = new ReverseGenomeComparer<T>();
-        protected static readonly Random Random = new Random();
+        protected readonly Random Random = Processor.CreateRandom();
         
         public bool IsElitist
         {

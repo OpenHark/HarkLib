@@ -3,40 +3,57 @@ using System.Collections;
 using System.Linq;
 using System;
 
-namespace HarkLib.AI.old
+using HarkLib.Core;
+
+namespace HarkLib.AI
 {
-    // https://github.com/UKirsche/UIHtmCal/tree/simple/HTMLibrary/HTMLibrary
     // http://numenta.com/assets/pdf/whitepapers/hierarchical-temporal-memory-cortical-learning-algorithm-0.2.1-en.pdf
     public class Region
     {
-        public Region()
+        public Region(int sizeX, int sizeY)
         {
+            this.ActiveColumns = new List<Column>();
+            this.Columns = new List<Column>();
+            //this.Segment = DendriteSegment
             
+            for(int x = 0; x < sizeX; ++x)
+            for(int y = 0; y < sizeY; ++y)
+                this.Columns.Add(new Column()
+                {
+                    Location = new Location()
+                    {
+                        X = x,
+                        Y = y
+                    }
+                });
         }
         
-        public void Initialize(List<IInput> inputs, double connectedPermanence)
+        public void Initialize(List<IInput> inputs, double radius, double connectedPermanence)
         {
             this.ConnectedPermanence = connectedPermanence;
             
             foreach(Column column in Columns)
             {
-                List<IInput> tempInputs = inputs.ToList();
+                List<IInput> tempInputs = inputs.Where(i => column.Location.Distance(i.Location) <= radius).ToList();
                 
-                Random rnd = new Random();
+                Random rnd = Processor.CreateRandom();
                 List<Synapse> synapses = column.Synapses;
                 
-                for(int i = 0; i < InitialNbSynapses; ++i)
-                {
+                //for(int i = 0; i < InitialNbSynapses && tempInputs.Count > 0; ++i)
+                foreach(IInput selectedInput in tempInputs)
+                {/*
                     int index = rnd.Next(0, tempInputs.Count);
                     IInput selectedInput = tempInputs[index];
-                    tempInputs.RemoveAt(index);
+                    tempInputs.RemoveAt(index);*/
                     double dist = column.Location.Distance(selectedInput.Location);
+                    double perm = (rnd.NextDouble() - rnd.NextDouble()) * InitialRandomPermanenceMax + ConnectedPermanence - dist / InitialDistanceBiasDivider;
                     synapses.Add(new Synapse()
                     {
                         Input = selectedInput,
                         ConnectionThreshold = ConnectedPermanence,
-                        Permanence = dist / InitialDistanceBiasDivider + rnd.NextDouble() * InitialRandomPermanenceMax + ConnectedPermanence
+                        Permanence = perm
                     });
+                    //Console.WriteLine(perm);
                 }
             }
         }
@@ -89,20 +106,46 @@ namespace HarkLib.AI.old
             set;
         }
         
-        public double Boost(Column c)
+        public int DesiredLocalActivity
         {
-            return 1.0;
+            get;
+            set;
+        }
+        
+        protected List<Column> ActiveColumns
+        {
+            get;
+            set;
+        }
+        
+        public double PermanenceInc
+        {
+            get;
+            set;
+        }
+        
+        public double PermanenceDec
+        {
+            get;
+            set;
+        }
+        
+        public double BoostStep
+        {
+            get;
+            set;
         }
         
         public void Phase1Overlap()
         {
             foreach(Column column in Columns)
             {
-                double overlap = 0;
+                double overlap = column.Synapses
+                    .Where(s => s.IsConnected)
+                    .Where(s => s.Value)
+                    .Count();
                 
-                foreach(Synapse syn in column.Synapses.Where(s => s.IsConnected))
-                    overlap += syn.Value ? 1 : 0;
-                
+                //Console.WriteLine(column.Overlap + " " + overlap + " " + column.Synapses.Count + " " + column.Synapses.Where(s => s.IsConnected).Count());
                 if(overlap < MinOverlap)
                     overlap = 0;
                 else
@@ -110,18 +153,13 @@ namespace HarkLib.AI.old
                 
                 column.Overlap = overlap;
             }
-        }
-        
-        public int DesiredLocalActivity
-        {
-            get;
-            set;
+            //foreach(Column column in Columns)
         }
         
         public List<Column> Neighbors(Column column, double radius)
         {
             return Columns
-                .Where(c => c != column)
+                //.Where(c => c != column)
                 .Where(c => column.Location.Distance(c.Location) <= radius)
                 .ToList();
         }
@@ -136,19 +174,14 @@ namespace HarkLib.AI.old
                 .First();
         }
         
-        protected List<Column> ActiveColumns
-        {
-            get;
-            set;
-        }
-        
         public void Phase2Inhibition()
         {
             ActiveColumns.Clear();
             foreach(Column column in Columns)
             {
+                //Console.WriteLine(InhibitionRadius);
                 double minLocalOverlap = GetKthBest(Neighbors(column, InhibitionRadius), DesiredLocalActivity);
-                
+                //Console.WriteLine(column.Overlap + " " + minLocalOverlap);
                 if(column.Overlap > 0 && column.Overlap >= minLocalOverlap)
                 {
                     ActiveColumns.Add(column);
@@ -157,17 +190,6 @@ namespace HarkLib.AI.old
                 else
                     column.Value = false;
             }
-        }
-        
-        public double PermanenceInc
-        {
-            get;
-            set;
-        }
-        public double PermanenceDec
-        {
-            get;
-            set;
         }
         
         protected double MaxDutyCycle(List<Column> columns)
@@ -205,13 +227,50 @@ namespace HarkLib.AI.old
                     column.Synapses.ForEach(s => s.Permanence += 0.1 * ConnectedPermanence);
             }
             
-            //InhibitionRadius = 
+            InhibitionRadius = Columns
+                .SelectMany(c => c.Synapses
+                    .Where(s => s.IsConnected)
+                    .Select(s => c.Location.Distance(s.Location)))
+                .DefaultIfEmpty(1.0)
+                .Average();
+            Console.WriteLine(" --*-* " + InhibitionRadius);
         }
         
-        public double BoostStep
+        public bool[,] GetOutputMap()
         {
-            get;
-            set;
+            int minX = Columns.Min(c => c.Location.X);
+            int minY = Columns.Min(c => c.Location.Y);
+            int maxX = Columns.Max(c => c.Location.X);
+            int maxY = Columns.Max(c => c.Location.Y);
+            
+            bool[,] output = new bool[maxX - minX + 1, maxY - minY + 1];
+            
+            foreach(Column column in Columns)
+            {
+                
+                    //Console.WriteLine(column.Overlap + " " + column.Value);
+                output[column.Location.X - minX, column.Location.Y - minY] = column.Value;
+            }
+            
+            return output;
+        }
+        
+        public bool[,] GetResultingInputMap()
+        {
+            int minX = Columns.Min(c => c.Location.X);
+            int minY = Columns.Min(c => c.Location.Y);
+            int maxX = Columns.Max(c => c.Location.X);
+            int maxY = Columns.Max(c => c.Location.Y);
+            
+            bool[,] output = new bool[maxX - minX + 1, maxY - minY + 1];
+            
+            foreach(List<Synapse> syns in Columns.Where(c => c.Value).Select(c => c.Synapses))
+            {
+                foreach(Synapse syn in syns.Where(s => s.IsConnected))
+                    output[syn.Location.X - minX, syn.Location.Y - minY] = true;
+            }
+            
+            return output;
         }
     }
 }

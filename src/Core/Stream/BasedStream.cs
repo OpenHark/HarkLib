@@ -60,6 +60,30 @@ namespace HarkLib.Core
             }
         }
         
+        public override int ReadTimeout
+        {
+            get
+            {
+                return BaseStream.ReadTimeout;
+            }
+            set
+            {
+                BaseStream.ReadTimeout = value;
+            }
+        }
+        
+        public override int WriteTimeout
+        {
+            get
+            {
+                return BaseStream.WriteTimeout;
+            }
+            set
+            {
+                BaseStream.WriteTimeout = value;
+            }
+        }
+        
         public override void Flush()
         {
             BaseStream.Flush();

@@ -169,6 +169,9 @@ foreach(Type t in assembly.GetTypes())
   - [ ] Add web directory browser
   - [ ] Add light web server for software interface
   - [ ] Add light webdav server for software interface
+- AI
+  - [ ] Finish HTM CLA
+  - [ ] Make a unit test for HTM CLA
 
 ## License
 

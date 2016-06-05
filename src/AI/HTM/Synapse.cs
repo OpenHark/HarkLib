@@ -3,7 +3,7 @@ using System.Collections;
 using System.Linq;
 using System;
 
-namespace HarkLib.AI.old
+namespace HarkLib.AI
 {
     // http://numenta.com/assets/pdf/whitepapers/hierarchical-temporal-memory-cortical-learning-algorithm-0.2.1-en.pdf
     public class Synapse : IInput

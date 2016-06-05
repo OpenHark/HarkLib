@@ -3,6 +3,8 @@ using System.Collections;
 using System.Linq;
 using System;
 
+using HarkLib.Core;
+
 namespace HarkLib.AI
 {
     public class SimulatedAnnealing<T>
@@ -39,7 +41,7 @@ namespace HarkLib.AI
             set;
         }
         
-        protected readonly Random Random = new Random();
+        protected readonly Random Random = Processor.CreateRandom();
         
         public void Run(int nbIterations)
         {

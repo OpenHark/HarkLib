@@ -138,6 +138,10 @@ namespace System.IO
             int size = stream.Read(4).ToInt32();
             
             byte[] data = new byte[size];
+            
+            if(size == 0)
+                return data;
+            
             int index = 0;
             while((index += stream.Read(data, index, size - index)) < size)
                 ;
